@@ -36,8 +36,8 @@ void Processus::ajouter_enfant (Processus enfant) {
 void Processus::imprimer_aux (int niveau_indentation) {
     string indentation (niveau_indentation * TAILLE_INDENTATION, ' ');
     cout << indentation << id << " " << nom << endl;
-    for (Processus p : enfants) {
-        p.imprimer_aux (niveau_indentation + 1);
+    for (list<Processus>::iterator p = enfants.begin(); p != enfants.end(); ++p) {
+        p->imprimer_aux (niveau_indentation + 1);
     }
 }
 
