@@ -9,8 +9,8 @@ class Processus {
     private:
         static const int TAILLE_INDENTATION = 2;
 
-        int id_;
-        string nom_;
+        int id;
+        string nom;
         list<Processus*> enfants;
 
         void imprimer_aux (int);

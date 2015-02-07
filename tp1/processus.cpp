@@ -7,8 +7,8 @@ using namespace std;
 
 
 Processus::Processus (int id, const string &nom) {
-    id_ = id;
-    nom_ = nom;
+    this->id = id;
+    this->nom = nom;
 }
 
 void Processus::ajouter_enfant (Processus &enfant) {
@@ -17,7 +17,7 @@ void Processus::ajouter_enfant (Processus &enfant) {
 
 void Processus::imprimer_aux (int niveau_indentation) {
     string indentation (niveau_indentation * TAILLE_INDENTATION, ' ');
-    cout << indentation << id_ << " " << nom_ << endl;
+    cout << indentation << id << " " << nom << endl;
    
     typedef list<Processus*>::const_iterator ListIterator;
     for (ListIterator it = enfants.begin(); it != enfants.end(); it++) {
