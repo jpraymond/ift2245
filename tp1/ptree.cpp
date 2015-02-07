@@ -78,7 +78,7 @@ void ajouter_processus (int id, map<int, Processus*> &les_processus, Processus *
     }
     else { // Le processus a déjà été traité.
         if (enfant != NULL) {
-            (*it->second).ajouter_enfant (*enfant);
+            it->second->ajouter_enfant (*enfant);
         }
     }
 }
