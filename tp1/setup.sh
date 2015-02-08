@@ -26,7 +26,7 @@ retour=$?
 
 if (($retour == 0)) || (($# != 2))
 then
-	echo "Il faut soumettre dans l'ordre un nom d'utilisateur inexistant et un mot de passe: recommencer"
+	echo "Il faut soumettre dans l'ordre un nom d'utilisateur inexistant et un mot de passe: veuillez recommencer."
 	exit 2
 fi
 
@@ -40,7 +40,7 @@ retour=$?
 
 if (($retour != 0))
 then
-	echo "nom d'utilisateur invalide: recommencer"
+	echo "Nom d'utilisateur invalide: veuillez recommencer."
 	exit 2
 fi
 
@@ -54,7 +54,7 @@ retour=$?
 
 if (($retour != 0))
 then
-	echo "mot de passe invalide: recommencer"
+	echo "Mot de passe invalide: veuillezrecommencer."
 	exit 2
 fi
 
@@ -74,6 +74,7 @@ mkdir result
 
 echo "fin 6"
 
+
 # 7 changement des proprietes et des droits
 
 chown -R $utilisateur. /home/$utilisateur/tp1
@@ -87,6 +88,7 @@ chmod -R 755 /home/$utilisateur/tp1
 
 echo "fin 7"
 
+
 # 8 Modification du chemin d'execution
 
 export PATH=$PATH:/home/$utilisateur/tp1/bin
@@ -99,8 +101,9 @@ echo "fin 8"
 # 9 Depot des fichiers
 
 install -o $utilisateur -g $utilisateur /home/os/setup.sh /home/$utilisateur/tp1/src
-
-install -o $utilisateur -g $utilisateur /home/os/hello.cpp /home/$utilisateur/tp1/src
+install -o $utilisateur -g $utilisateur /home/os/processus.h /home/$utilisateur/tp1/src
+install -o $utilisateur -g $utilisateur /home/os/processus.cpp /home/$utilisateur/tp1/src
+install -o $utilisateur -g $utilisateur /home/os/ptree.cpp /home/$utilisateur/tp1/src
 
 #ls -l /home/$utilisateur/tp1/src | cat
 
@@ -109,20 +112,17 @@ echo "fin 9"
 
 # 10 Production et depot de l'executable
 
-# remplacer hello par fstree ci-dessous
-prog="hello"
-#echo "nom du programme: $prog"
-
-g++ -o /home/$utilisateur/tp1/bin/$prog /home/$utilisateur/tp1/src/$prog.cpp
+g++ -o /home/$utilisateur/tp1/bin/ptree /home/$utilisateur/tp1/src/processus.cpp /home/$utilisateur/tp1/src/ptree.cpp
  
-chmod -R o=r-x /home/$utilisateur/tp1/bin/$prog
+chmod -R o=r-x /home/$utilisateur/tp1/bin/ptree
 
 echo "fin 10"
 
 
 # 11 Production et depot des sorties
 
-$prog > /home/$utilisateur/tp1/result/zero
+ptree > /home/$utilisateur/tp1/result/zero
+ptree 1 2 > /home/$utilisateur/tp1/result/one.two
 
 echo "fin 11"
 
