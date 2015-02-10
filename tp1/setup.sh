@@ -54,7 +54,7 @@ retour=$?
 
 if (($retour != 0))
 then
-	echo "Mot de passe invalide: veuillezrecommencer."
+	echo "Mot de passe invalide: veuillez recommencer."
 	exit 2
 fi
 
@@ -63,14 +63,17 @@ echo "fin 5"
 
 # 6 Creation des repertoires
 
-cd /home/$utilisateur
-mkdir tp1
 
-cd tp1
-mkdir src
-mkdir bin
-mkdir result
-#ls -l | cat
+mkdir -p /home/$utilisateur/tp1
+
+liste=(src bin result)
+
+for elem in "${liste[@]}"
+do
+mkdir /home/$utilisateur/tp1/$elem
+done
+
+#ls -l /home/$utilisateur/tp1 | cat
 
 echo "fin 6"
 
@@ -78,13 +81,14 @@ echo "fin 6"
 # 7 changement des proprietes et des droits
 
 chown -R $utilisateur. /home/$utilisateur/tp1
-#ls -l | cat
+
+#ls -l /home/$utilisateur/tp1 | cat
 
 chmod -R 755 /home/$utilisateur/tp1
+
 # avec rapport
-#chmod -R -v a+wrx /home/$utilisateur/tp1
-#chmod -R -v og-w /home/$utilisateur/tp1
-#ls -l | cat
+#chmod -R -v 755 /home/$utilisateur/tp1
+#ls -l /home/$utilisateur/tp1 | cat
 
 echo "fin 7"
 
@@ -92,6 +96,8 @@ echo "fin 7"
 # 8 Modification du chemin d'execution
 
 export PATH=$PATH:/home/$utilisateur/tp1/bin
+
+# verification
 #echo $PATH
 #sudo -u $utilisateur echo $PATH 
 
@@ -100,10 +106,14 @@ echo "fin 8"
 
 # 9 Depot des fichiers
 
-install -o $utilisateur -g $utilisateur /home/os/setup.sh /home/$utilisateur/tp1/src
-install -o $utilisateur -g $utilisateur /home/os/processus.h /home/$utilisateur/tp1/src
-install -o $utilisateur -g $utilisateur /home/os/processus.cpp /home/$utilisateur/tp1/src
-install -o $utilisateur -g $utilisateur /home/os/ptree.cpp /home/$utilisateur/tp1/src
+#echo "pwd:" `pwd`
+
+liste=("setup.sh" "processus.h" "processus.cpp" "ptree.cpp")
+
+for elem in "${liste[@]}"
+do
+install -o $utilisateur -g $utilisateur $elem /home/$utilisateur/tp1/src
+done
 
 #ls -l /home/$utilisateur/tp1/src | cat
 
@@ -134,9 +144,7 @@ echo -e "Eric Larsen\nJean-Philippe Raymond" > /home/$utilisateur/auteur
 echo "fin 12"
 
 
-
-
-
+# 13 Sortie reguliere
 
 exit 0
 
