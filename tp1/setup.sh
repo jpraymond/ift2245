@@ -24,9 +24,15 @@ retour=$?
 
 # 3 Controle preliminaire des parametres
 
-if (($retour == 0)) || (($# != 2))
+if (($# != 2))
 then
 	echo "Il faut soumettre dans l'ordre un nom d'utilisateur inexistant et un mot de passe: veuillez recommencer."
+	exit 2
+fi
+
+if (($retour == 0))
+then
+	echo "Le nom d'utilisateur soumis doit etre inexistant: veuillez recommencer."
 	exit 2
 fi
 
