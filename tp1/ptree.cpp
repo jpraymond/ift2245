@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
     // itere sur les structures presentes
     while ((d = readdir(dossier_processus)) != NULL) {
 
-        // tente de convertir le champ indiquant le nom du processus en entier
+        // tente de convertir le champ indiquant le numero du processus en entier
         int id = atoi(d->d_name); // Retourne 0 si l'argument n'est pas un entier.
         if (id != 0) {
             ajouter_processus (id, les_processus);
