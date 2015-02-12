@@ -1,4 +1,4 @@
-#!bin/bash
+#!/bin/bash
 
 # IFT2245
 # devoir 1
@@ -72,7 +72,7 @@ echo "fin 5"
 
 mkdir -p /home/$utilisateur/tp1
 
-liste = ("src" "bin" "result")
+liste=(src bin result)
 
 for elem in "${liste[@]}"
 do
@@ -138,14 +138,14 @@ echo "fin 10"
 # 11 Production et depot des sorties
 
 ptree > /home/$utilisateur/tp1/result/zero
-ptree 1 2 > /home/$utilisateur/tp1/result/one.two
+ptree 1 2 > /home/$utilisateur/tp1/result/one_two
 
 echo "fin 11"
 
 
 # 12 Ajout du fichier d'identification
 
-echo -e "Eric Larsen\nJean-Philippe Raymond" > /home/$utilisateur/auteur
+echo -e "Eric Larsen\nJean-Philippe Raymond" > /home/$utilisateur/tp1/auteur
 
 echo "fin 12"
 
@@ -153,7 +153,3 @@ echo "fin 12"
 # 13 Sortie reguliere
 
 exit 0
-
-
-
-
