@@ -19,18 +19,18 @@ passe=$2
 
 grep "^$utilisateur" /etc/passwd >/dev/null
 retour=$? 
-#echo $retour
+# echo $retour
 
 
 # 3 Controle preliminaire des parametres
 
-if (($# != 2))
+if [ $# != 2 ]
 then
 	echo "Il faut soumettre dans l'ordre un nom d'utilisateur inexistant et un mot de passe: veuillez recommencer."
 	exit 2
 fi
 
-if (($retour == 0))
+if [ $retour = 0 ]
 then
 	echo "Le nom d'utilisateur soumis doit etre inexistant: veuillez recommencer."
 	exit 2
@@ -44,7 +44,7 @@ echo "fin 3"
 useradd -m $utilisateur
 retour=$?
 
-if (($retour != 0))
+if [ $retour != 0 ]
 then
 	echo "Nom d'utilisateur invalide: veuillez recommencer."
 	exit 2
@@ -58,7 +58,7 @@ echo "fin 4"
 echo "$utilisateur:$passe" | chpasswd
 retour=$?
 
-if (($retour != 0))
+if [ $retour != 0 ]
 then
 	echo "Mot de passe invalide: veuillez recommencer."
 	exit 2
@@ -72,7 +72,7 @@ echo "fin 5"
 
 mkdir -p /home/$utilisateur/tp1
 
-liste=(src bin result)
+liste = ("src" "bin" "result")
 
 for elem in "${liste[@]}"
 do
