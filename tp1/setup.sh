@@ -96,7 +96,7 @@ chown -R $utilisateur. /home/$utilisateur/tp1
 
 # 8 Modification du chemin d'execution
 
-sudo -u $utilisateur echo -e "source ~ /.profile\nexport PATH=$PATH:/home/$utilisateur/tp1/bin" >> /home/$utilisateur/.bash_profile
+sudo -u $utilisateur echo -e "PATH=\$PATH:/home/$utilisateur/tp1/bin\nexport PATH" >> /home/$utilisateur/.profile
 #sudo -u $utilisateur echo $PATH
 
 export PATH=$PATH:/home/$utilisateur/tp1/bin
