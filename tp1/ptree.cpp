@@ -1,5 +1,8 @@
-// TODO: Tester.
-// TODO: Tester sur VirtualBox.
+// IFT2245
+// Devoir 1
+// 12 fevrier 2015
+// Eric Larsen
+// Jean-Philippe Raymond
 
 /* File system */
 #include <dirent.h>
