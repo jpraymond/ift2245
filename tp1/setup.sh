@@ -15,28 +15,30 @@ utilisateur=$1
 passe=$2
 
 
-# 2 Verification de l'existence du nom d'utilisateur
+# 2 Controle du nombre de parametres
 
-grep "^$utilisateur" /etc/passwd >/dev/null
-retour=$? 
-# echo $retour
-
-
-# 3 Controle preliminaire des parametres
-
-if [ $# != 2 ]
+if (($# != 2))
 then
 	echo "Il faut soumettre dans l'ordre un nom d'utilisateur inexistant et un mot de passe: veuillez recommencer."
 	exit 2
 fi
 
-if [ $retour = 0 ]
+#echo "fin 2"
+
+
+# 3 Verification de l'existence du nom d'utilisateur
+
+grep "^$utilisateur" /etc/passwd >/dev/null
+retour=$? 
+#echo $retour
+
+if (($retour == 0))
 then
 	echo "Le nom d'utilisateur soumis doit etre inexistant: veuillez recommencer."
 	exit 2
 fi
 
-echo "fin 3"
+#echo "fin 3"
 
 
 # 4 Controle et creation du nom d'utilisateur
@@ -44,13 +46,13 @@ echo "fin 3"
 useradd -m $utilisateur
 retour=$?
 
-if [ $retour != 0 ]
+if (($retour != 0))
 then
 	echo "Nom d'utilisateur invalide: veuillez recommencer."
 	exit 2
 fi
 
-echo "fin 4"	
+#echo "fin 4"	
 
 
 # 5 Controle et creation du mot de passe
@@ -58,13 +60,13 @@ echo "fin 4"
 echo "$utilisateur:$passe" | chpasswd
 retour=$?
 
-if [ $retour != 0 ]
+if (($retour != 0))
 then
 	echo "Mot de passe invalide: veuillez recommencer."
 	exit 2
 fi
 
-echo "fin 5"
+#echo "fin 5"
 
 
 # 6 Creation des repertoires
@@ -81,33 +83,26 @@ done
 
 #ls -l /home/$utilisateur/tp1 | cat
 
-echo "fin 6"
+#echo "fin 6"
 
 
-# 7 changement des proprietes et des droits
+# 7 changement des proprietes
 
 chown -R $utilisateur. /home/$utilisateur/tp1
-
 #ls -l /home/$utilisateur/tp1 | cat
 
-chmod -R 755 /home/$utilisateur/tp1
-
-# avec rapport
-#chmod -R -v 755 /home/$utilisateur/tp1
-#ls -l /home/$utilisateur/tp1 | cat
-
-echo "fin 7"
+#echo "fin 7"
 
 
 # 8 Modification du chemin d'execution
 
+sudo -u $utilisateur echo -e "source ~ /.profile\nexport PATH=$PATH:/home/$utilisateur/tp1/bin" >> /home/$utilisateur/.bash_profile
+#sudo -u $utilisateur echo $PATH
+
 export PATH=$PATH:/home/$utilisateur/tp1/bin
+#sudo -u $utilisateur echo $PATH
 
-# verification
-#echo $PATH
-#sudo -u $utilisateur echo $PATH 
-
-echo "fin 8"
+#echo "fin 8"
 
 
 # 9 Depot des fichiers
@@ -123,33 +118,50 @@ done
 
 #ls -l /home/$utilisateur/tp1/src | cat
 
-echo "fin 9"
+#echo "fin 9"
 
 
 # 10 Production et depot de l'executable
 
 g++ -o /home/$utilisateur/tp1/bin/ptree /home/$utilisateur/tp1/src/processus.cpp /home/$utilisateur/tp1/src/ptree.cpp
- 
-chmod -R o=r-x /home/$utilisateur/tp1/bin/ptree
+#ls -l /home/$utilisateur/tp1/bin | cat
 
-echo "fin 10"
+# modification de la propriete
+chown -R $utilisateur. /home/$utilisateur/tp1/bin/ptree
+
+#echo "fin 10"
 
 
 # 11 Production et depot des sorties
 
 ptree > /home/$utilisateur/tp1/result/zero
-ptree 1 2 > /home/$utilisateur/tp1/result/one_two
+ptree 0 1 > /home/$utilisateur/tp1/result/one_two
+#ls -l /home/$utilisateur/tp1/result | cat
 
-echo "fin 11"
+# modification de la propriete
+chown -R $utilisateur. /home/$utilisateur/tp1/result/zero
+chown -R $utilisateur. /home/$utilisateur/tp1/result/one_two
+#ls -l /home/$utilisateur/tp1/result | cat
+
+#echo "fin 11"
 
 
 # 12 Ajout du fichier d'identification
 
 echo -e "Eric Larsen\nJean-Philippe Raymond" > /home/$utilisateur/tp1/auteur
+#ls -l /home/$utilisateur/tp1/ | cat
 
-echo "fin 12"
+# modification de la propriete
+chown -R $utilisateur. /home/$utilisateur/tp1/auteur
+#ls -l /home/$utilisateur/tp1/ | cat
+
+#echo "fin 12"
 
 
 # 13 Sortie reguliere
 
 exit 0
+
+
+
+
