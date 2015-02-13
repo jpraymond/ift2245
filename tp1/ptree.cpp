@@ -1,6 +1,5 @@
 // TODO: Tester.
 // TODO: Tester sur VirtualBox.
-// TODO: Vérifier la gestion de la mémoire.
 
 /* File system */
 #include <dirent.h>
@@ -137,19 +136,19 @@ int main(int argc, char *argv[]) {
     map<int, Processus*> les_processus;
     
     // construit le processus racine
-    Processus p (ID_PROCESSUS_RACINE, NOM_PROCESSUS_RACINE);
+    Processus *p = new Processus (ID_PROCESSUS_RACINE, NOM_PROCESSUS_RACINE);
 
     // le depose dans le dictionnaire
-    les_processus[ID_PROCESSUS_RACINE] = &p;
+    les_processus[ID_PROCESSUS_RACINE] = p;
     
     // met en place l'appareillage de visite 
-    DIR *dossier_processus = opendir(DOSSIER_PROCESSUS.c_str());
+    DIR *dossier_processus = opendir (DOSSIER_PROCESSUS.c_str());
     
     // declare la structure typique
     struct dirent * d;
 
     // itere sur les structures presentes
-    while ((d = readdir(dossier_processus)) != NULL) {
+    while ((d = readdir (dossier_processus)) != NULL) {
 
         // tente de convertir le champ indiquant le numero du processus en entier
         int id = atoi(d->d_name); // Retourne 0 si l'argument n'est pas un entier.
@@ -159,7 +158,7 @@ int main(int argc, char *argv[]) {
     }
 
     // fermeture de l'appareillage de visite
-    closedir(dossier_processus);    
+    closedir (dossier_processus);    
    
     // aucun argument n'est fourni en parametre: l'arbre est genere a partir de la racine 
     if (argc == 1) {
@@ -168,17 +167,21 @@ int main(int argc, char *argv[]) {
 
     // autrement, les arbres des processus existants fournis en parametre sont generes dans l'ordre
     else{
+        for (int i=1; i < argc; i++) {
 
-      int id;
-
-      for (int i=1; i < argc; i++)
-	{
-
-	  // conversion de la chaine fournie en parametre identifiant le processus
-	  id = atoi (argv[i]);
-	  if (les_processus[id] != NULL)
-	    les_processus[id]->imprimer();
-
-	}
+            // conversion de la chaine fournie en parametre identifiant le processus
+            int id = atoi (argv[i]);
+            if (les_processus[id] != NULL) {
+                 les_processus[id]->imprimer();
+            }
+        }
     }
+
+    /* Toute la mémoire est normalement libérée à la fin de l'exécution du
+     * programme, même celle allouée avec 'new'. On la libère tout de même
+     * explicitement juste au cas. */
+   map<int, Processus*>::iterator it;
+   for (it = les_processus.begin(); it != les_processus.end(); it++) {
+       delete it->second;
+   }
 }
