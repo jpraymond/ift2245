@@ -25,21 +25,57 @@ void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
 /// with the server and send the request
 /// USE the ''localhost'' address and the portNumber port
 void *ClientThread::clientThreadCode(void * param){
-	ClientThread* clientThreadPtr = (ClientThread*)param;
+    ClientThread* clientThreadPtr = (ClientThread*)param;
 
-	int sockfd;
-    
-    
+    int sockfd;
+    struct hostent *server;
+    struct sockaddr_in serv_addr;
+
     for (int rID = 0 ; rID < numRequests ; rID++ ) {
-		//Start creating conextions to send the request
-		
-		/// TP2_TO_DO
-		
-		sendRequest(clientThreadPtr->ID,rID,sockfd);
-		
-		/// TP2_END_TO_DO 
-	}
-	pthread_exit(NULL);
+        //Start creating conextions to send the request
+
+	/// TP2_TO_DO
+
+        /** =========================================================================
+        Creation d'une nouvelle prise ('socket') et etablissement d'une
+        connexion avec le serveur.
+
+        Suivant http://www.linuxhowtos.org/C_C++/socket.htm.
+        -------------------------------------------------------------------------- */
+        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        if (sockfd < 0) {
+            error("ERROR opening socket");
+        }
+
+        server = gethostbyname("localhost");
+        if (server == NULL) {
+            error("ERROR, host not reachable");
+        }
+
+        bzero((char *) &serv_addr, sizeof(serv_addr));
+        serv_addr.sin_family = AF_INET;
+        bcopy((char *) server->h_addr,
+              (char *) &serv_addr.sin_addr.s_addr,
+              server->h_length);
+        serv_addr.sin_port = htons(portNumber);
+
+        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+            error("ERROR connecting"); 
+        }
+        /** ====================================================================== */
+        
+        sendRequest(clientThreadPtr->ID,rID,sockfd);
+
+        close(sockfd);
+	
+	/// TP2_END_TO_DO 
+    }
+
+    pthread_mutex_lock(&mutexCountClientsDispatched);
+    countClientsDispatched++;
+    pthread_mutex_unlock(&mutexCountClientsDispatched);
+
+    pthread_exit(NULL);
 }
 
 /// Change the sleep() function for a correct solution for
@@ -49,8 +85,7 @@ void *ClientThread::clientThreadCode(void * param){
 void ClientThread::waitUntilServerFinishes(){
 	/// TP2_TO_DO
 	
-	sleep(2); 
-	
+        while (countClientsDispatched != numClients);
 	
 	/// TP2_END_TO_DO
 }
@@ -87,7 +122,7 @@ int ClientThread::readConfigurationFile(const char *fileName){
 	cfg.lookupValue("numClients",numClients);
 	cfg.lookupValue("numResources",numResources);
 	cfg.lookupValue("numRequestsPerClient",numRequests);
-	
+
 	Max = new int*[numClients];
 	for (int i = 0 ; i < numClients ; i++)
 		Max[i] = new int[numResources];
@@ -103,7 +138,7 @@ int ClientThread::readConfigurationFile(const char *fileName){
 
 void ClientThread::readMaxFromFile(){
 	fstream fs;
-	if (fileExists("temp/Max")) {
+	if (fileExists("temp/Max")) { // TODO: Si le fichier n'existe pas?
 		fs.open("temp/Max", fstream::in);
 		
 		for (int i = 0 ; i < numClients ; i++)
@@ -120,13 +155,20 @@ ClientThread::ClientThread(){
 }
 
 ClientThread::~ClientThread(){
-	
-	if (Max != NULL) {
-		for (int i = 0 ; i < numResources  ; i++)
-			delete []Max[i];
-		delete []Max;
-		Max = NULL;
-	}
+    // TODO: N'est-ce-pas problematique de supprimer des variables de classe
+    //       dans un destructeur?
+
+    pthread_mutex_destroy(&mutexCountAccepted);
+    pthread_mutex_destroy(&mutexCountOnWait);
+    pthread_mutex_destroy(&mutexCountInvalid);
+    pthread_mutex_destroy(&mutexCountClientsDispatched);
+    
+    if (Max != NULL) {
+        for (int i = 0 ; i < numResources  ; i++)
+        delete []Max[i];
+        delete []Max;
+        Max = NULL;
+    }
 }
 
 void ClientThread::createAndStartThread(){	
@@ -147,5 +189,10 @@ int ClientThread::countAccepted = 0;
 int ClientThread::countOnWait = 0;
 int ClientThread::countInvalid = 0;
 int ClientThread::countClientsDispatched = 0;
+
+pthread_mutex_t ClientThread::mutexCountAccepted = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ClientThread::mutexCountOnWait = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ClientThread::mutexCountInvalid = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ClientThread::mutexCountClientsDispatched = PTHREAD_MUTEX_INITIALIZER;
 
 int **ClientThread::Max = NULL;
