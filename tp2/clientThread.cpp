@@ -5,18 +5,154 @@
 /// use this function that is called only one time
 /// before all the threads start
 void ClientThread::additionalInitialization(){
-
-
+    allocatedResources = new int*[numClients];
+    for (int i = 0; i < numClients; i++) {
+        allocatedResources[i] = new int[numResources]();
+    }
 }
 
 /// Implement in this function the code necesesary to generate and
 /// sent each request based on the parameters given.
 void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
-	/// TP2_TO_DO
+    /// TP2_TO_DO
+    // Les nombres de ressources a mettre dans la requete.
+    int *resourceQuantities = new int[numResources]();
 
-	cout << "Client " << clientID << " is sending its " << requestID << " request" << endl;
-	
-	/// TP2_END_TO_DO
+    
+    if (requestID == 0) { // La premiere requete.
+        cout << "Premiere" << '\n';
+        randomAllocations(clientID, resourceQuantities);
+    }
+    else if (requestID == numRequests - 1) { // La derniere requete.
+        cout << "Derniere" << '\n';
+        copy(allocatedResources[clientID],
+             allocatedResources[clientID] + numResources,
+             resourceQuantities);
+    }
+    // Les autres requetes.
+    else if (!allocationPossible(clientID)) {
+        cout << "Pas allocation possible" << '\n';
+        // Le client utilise presentement toutes les ressources a sa
+        // disposition.
+        randomReleases(clientID, resourceQuantities);
+    }
+    else if (!releasePossible(clientID)) {
+        cout << "Pas release possible" << '\n';
+        // Le client utilise presentement une seule ressource.
+        randomAllocations(clientID, resourceQuantities);
+    }
+    // A ce stade, le client a l'option de faire une demande ou une
+    // liberation de ressources. On 'flip' un trente sous.
+    else if (rand() % 2) {
+        cout << "Random allocation" << '\n';
+        randomAllocations(clientID, resourceQuantities);
+    }
+    else {
+        cout << "Random release" << '\n';
+        randomReleases(clientID, resourceQuantities);
+    }
+    
+    string request = i_to_str(clientID);
+    request = request + " " + ints_to_str(resourceQuantities, numResources);
+
+    write(socketFD, request.c_str(), request.length());
+    
+    cout << "Client " << clientID << " is sending its " << requestID << " request" << endl;
+    cout << request << '\n';
+
+    // TODO: Gerer la reponse du serveur.
+    char reply[20];
+    bzero(reply, 20);
+    read(socketFD, reply, 19);
+    cout << "Reply : " << reply << '\n';
+
+    // On met a jour allocatedResources.
+    for (int i = 0; i < numResources; i++) {
+        allocatedResources[clientID][i] -= resourceQuantities[i];
+    }
+
+    delete resourceQuantities;
+    /// TP2_END_TO_DO
+}
+
+// TODO: Les deux fonctions suivantes ont beaucoup en commun ...
+
+void ClientThread::randomAllocations(int clientID, int *allocations) {
+    bool atLeastOne = false;
+    do {
+        for (int i = 0; i < numResources; i++) {
+            int available = Max[clientID][i] - allocatedResources[clientID][i];
+            allocations[i] = 0; // On n'est jamais trop prudent :)
+            if (available != 0) {
+                int allocation = rand() % (available + 1);
+                allocations[i] = -allocation;                
+                
+                if (allocation > 0) {
+                    atLeastOne = true;
+                }
+            }
+        }            
+    } while (!atLeastOne );    
+}
+
+void ClientThread::randomReleases(int clientID, int *releases) {
+    bool atLeastOne = false;
+    bool notEverything = false;
+    do {
+        for (int i = 0; i < numResources; i++) {
+            int releasable = allocatedResources[clientID][i];
+            releases[i] = 0;
+            if (releasable != 0) {
+                int release = rand() % (releasable + 1);
+                releases[i] = release;
+                
+                if (release > 0) {
+                    atLeastOne = true;
+                }
+
+                if (release < releasable) {
+                    notEverything = true;
+                }
+            }
+        }
+    } while (!atLeastOne || !notEverything);
+}
+
+bool ClientThread::allocationPossible(int clientID) {
+    // Une demande de ressources est possible si le client n'utilise pas
+    // presentement toutes les ressources a sa disposition.
+    return sum(Max[clientID], numResources) > 
+           sum(allocatedResources[clientID], numResources);
+}
+
+bool ClientThread::releasePossible(int clientID) {
+    // Une liberation partielle des ressources est possible si le client
+    // utilise presentement au moins deux ressources.
+    return sum(allocatedResources[clientID], numResources) > 1;
+}
+
+// TODO: Ecrire un ensemble de fonctions pour faire des operations generiques
+//       sur des vecteurs et les utiliser aussi dans le code du serveur.
+//
+//       Re-ecrire le code des fonctions precedentes en utlisant de telles
+//       fonctions.
+//
+//       Jeter un coup d'oeil a la classe vector.
+int ClientThread::sum(int *integers, int length) {
+    int sum = 0;
+    for (int i = 0; i < length; i++) {
+        sum += integers[i];
+    }
+    return sum;
+}
+
+// TODO: Mettre dans common.h?
+string ClientThread::ints_to_str(int *integers, int length) {
+    string str ("");
+    for (int i = 0; i < length; i++) {
+        str += (i_to_str(integers[i]) + " ");
+    }
+    return str.substr(0, str.length() - 1);
 }
 
 /// This function is called by each client thread and starts
@@ -151,7 +287,7 @@ void ClientThread::readMaxFromFile(){
 }
 
 ClientThread::ClientThread(){
-	ID = count++;
+    ID = count++;    
 }
 
 ClientThread::~ClientThread(){
@@ -163,18 +299,26 @@ ClientThread::~ClientThread(){
     pthread_mutex_destroy(&mutexCountInvalid);
     pthread_mutex_destroy(&mutexCountClientsDispatched);
     
+    // TODO: Semble inverse. On devrait 'loop' sur numClients.
     if (Max != NULL) {
         for (int i = 0 ; i < numResources  ; i++)
-        delete []Max[i];
+            delete []Max[i];
         delete []Max;
         Max = NULL;
     }
+    
+    if (allocatedResources != NULL) {
+        for (int i = 0; i < numClients; i++)
+            delete []allocatedResources[i];
+        delete []allocatedResources;
+        allocatedResources = NULL;
+    }  
 }
 
 void ClientThread::createAndStartThread(){	
-	pthread_attr_init(&pt_attr);
-	pthread_create(&pt_tid,&pt_attr,&clientThreadCode,this);
-	pthread_detach(pt_tid);
+    pthread_attr_init(&pt_attr);
+    pthread_create(&pt_tid,&pt_attr,&clientThreadCode,this);
+    pthread_detach(pt_tid);
 }
 
 //Initialization of static variables
@@ -196,3 +340,4 @@ pthread_mutex_t ClientThread::mutexCountInvalid = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t ClientThread::mutexCountClientsDispatched = PTHREAD_MUTEX_INITIALIZER;
 
 int **ClientThread::Max = NULL;
+int **ClientThread::allocatedResources = NULL;

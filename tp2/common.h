@@ -23,6 +23,8 @@
 #include <fstream>
 #include <ostream>
 
+#include <sstream>
+
 using namespace std;
 
 //Outputs a readable error message and exits the program
@@ -39,6 +41,11 @@ bool fileExists(const char *fileName)
 	return (stat(fileName,&fileExistTest) == 0);
 }
 
-
+// retourne un entier sous forme de chaine
+string i_to_str (int n) {
+    stringstream ss;
+    ss << n;
+    return ss.str();
+} 
 
 #endif // COMMON_H
