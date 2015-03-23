@@ -208,16 +208,34 @@ void *ClientThread::clientThreadCode(void * param){
     pthread_exit(NULL);
 }
 
-/// Change the sleep() function for a correct solution for
-/// the ending synchronization problem. The client has to
-/// wait for the server to proccess all request before ending
-/// its excecution. HINT: Look for named pipes
+// see http://tuxthink.blogspot.ca/2012/02/inter-process-communication-using-named.html	
+// http://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
+
 void ClientThread::waitUntilServerFinishes(){
-	/// TP2_TO_DO
-	
+		
+	string name_str = i_to_str(portNumber);
+	const char* name_char = name_str.c_str();
+	int serverPipe;
+	serverPipe = open(name_char, O_RDWR);
+	if (serverPipe < 1)
+		error("ERROR opening fifo server pipe");	
+	bool finished;
+
+	sleep(2)
+
         while (countClientsDispatched != numClients);
+
+	while (finished == NULL)
+
+		read(serverPipe, &finished, sizeof(bool));
+
+ 	cout << "server has sent FINISHED message to client through pipe" << portNumber << endl;
+
+	close(serverPipe);
+}
 	
-	/// TP2_END_TO_DO
+	
+	
 }
 
 /// You can modify this function to print other values at
