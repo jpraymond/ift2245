@@ -20,35 +20,29 @@ void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
 
     
     if (requestID == 0) { // La premiere requete.
-        cout << "Premiere" << '\n';
         randomAllocations(clientID, resourceQuantities);
     }
     else if (requestID == numRequests - 1) { // La derniere requete.
-        cout << "Derniere" << '\n';
         copy(allocatedResources[clientID],
              allocatedResources[clientID] + numResources,
              resourceQuantities);
     }
     // Les autres requetes.
     else if (!allocationPossible(clientID)) {
-        cout << "Pas allocation possible" << '\n';
         // Le client utilise presentement toutes les ressources a sa
         // disposition.
         randomReleases(clientID, resourceQuantities);
     }
     else if (!releasePossible(clientID)) {
-        cout << "Pas release possible" << '\n';
         // Le client utilise presentement une seule ressource.
         randomAllocations(clientID, resourceQuantities);
     }
     // A ce stade, le client a l'option de faire une demande ou une
     // liberation de ressources. On 'flip' un trente sous.
     else if (rand() % 2) {
-        cout << "Random allocation" << '\n';
         randomAllocations(clientID, resourceQuantities);
     }
     else {
-        cout << "Random release" << '\n';
         randomReleases(clientID, resourceQuantities);
     }
     
