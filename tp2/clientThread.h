@@ -57,8 +57,6 @@ private:
         static bool releasePossible(int clientID);
 
         static int sum(int integers[], int length);
-
-        static std::string ints_to_str(int integers[], int length);
 };
 
 #endif // CLIENTTHREAD_H

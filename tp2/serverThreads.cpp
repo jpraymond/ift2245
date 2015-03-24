@@ -2,13 +2,30 @@
 #include "common.h"
 
 
-bool ServerThreads::isExcessive(int id, int numRes, int request[])
+
+// methodes auxiliaires
+
+bool ServerThreads::asksBeyondMax(int id,  int request[])
 {
   bool value = false;
-  for (int i = 0 ; i < numRes ; i++)
-    {
+  for (int i = 0 ; i < numResources ; i++)
+  {
       if (Allocation[id][i] - request[i] > Max[id][i])
-	{
+  	{
+	  value = true;
+	  break;
+	}
+    }
+  return value;
+}
+
+bool ServerThreads::returnsBeyondAllocation(int id,  int request[])
+{
+  bool value = false;
+  for (int i = 0 ; i < numResources ; i++)
+  {
+      if (Allocation[id][i] - request[i] < 0)
+  	{
 	  value = true;
 	  break;
 	}
@@ -17,22 +34,77 @@ bool ServerThreads::isExcessive(int id, int numRes, int request[])
 }
 
 
-void ServerThreads::addTo(int First[], int Second[], int dim)
+
+bool ServerThreads::returnsExactAllocation(int id, int request[])
 {
-  for (int i = 0; i < dim; i++)
-    {
-      Second[i] += First[i];    
+  bool value = true;
+  for (int i = 0 ; i < numResources ; i++)
+  {
+      if (Allocation[id][i] - request[i] != 0)
+  	{
+	  value = false;
+	  break;
+	}
     }
+  return value;
 }
 
 
-void ServerThreads::subtractFrom(int First[], int Second[], int dim)
+void ServerThreads::addToAlloc(int id, int request[])
 {
-  for (int i = 0; i < dim; i++)
+  for (int i = 0; i < numResources; i++)
     {
-      Second[i] -= First[i];    
+      Allocation[id][i] += request[i];    
     }
-}
+ }
+ 
+
+void ServerThreads::addToAvail(int request[])
+{
+  for (int i = 0; i < numResources; i++)
+    {
+      Available[i] += request[i];    
+    }
+ }
+
+
+void ServerThreads::subtractFromAlloc(int id, int request[])
+{
+  for (int i = 0; i < numResources; i++)
+    {
+      Allocation[id][i] -= request[i];    
+    }
+ }
+ 
+
+void ServerThreads::subtractFromAvail(int request[])
+{
+  for (int i = 0; i < numResources; i++)
+    {
+      Available[i] -= request[i];    
+    }
+ }
+
+
+
+
+
+
+/*
+
+void ServerThreads::checkAndDispatch(int id)
+{
+  if (numRequestsPerClient ==  ++NumProcPerClient[recClientThreadID])
+    {
+      countClientsDispatched++;
+      for (int i = 0; i < numResources; i++)
+	{
+	  Allocation[id][i] = 0;
+	}
+    }
+
+*/
+
 
 
 bool ServerThreads::isSmallerOrEqual(int Left[], int Right[], int dim)
@@ -49,7 +121,7 @@ bool ServerThreads::isSmallerOrEqual(int Left[], int Right[], int dim)
   return value;
 }
 
-
+/*
 bool ServerThreads::isEqualToZero(int Tab[], int dim)
 {
   bool value = true;
@@ -63,13 +135,27 @@ bool ServerThreads::isEqualToZero(int Tab[], int dim)
     }
   return value;
 }
-
+*/
 
 void ServerThreads::initializationOfDataStructures()
 {
-  //TODO configurer correctement metaMax
-  int metaMax = 100;
-  //printf("intit 0");
+  int maxAvail = availFactor * numClients * numResources;
+  for (int i = 0 ; i < numResources ; i++)
+    {
+      Work[i] = 0;
+    }
+  if (!initDataProvided)
+    {
+      for (int j = 0 ; j < numResources ; j++)
+	{	  
+	  Available[j] = 1 + rand()%maxAvail;
+	  for (int i = 0 ; i < numClients ; i++)
+	    Max[i][j] =   1+ rand()%Available[j]; 
+	}
+      // The initilized values will be written to a file for the
+      // client to read them afterwards
+      writeMaxToFile();
+    }
   for (int i = 0 ; i < numClients ; i++)
     {
       Finish[i] = NULL;
@@ -78,29 +164,11 @@ void ServerThreads::initializationOfDataStructures()
       for (int j = 0 ; j < numResources ; j++)
 	{
 	  Allocation[i][j] = 0;
-	  Need[i][j] = 0;
+	  Need[i][j] = Max[i][j];
 	  HypoAllocation[i][j] = 0;
 	  HypoNeed[i][j] = 0;
 	}
-    } 
-  //printf("intit 1");
-  for (int i = 0 ; i < numResources ; i++)
-    {
-      Work[i] = 0;
-    }
-  // printf("intit 2");
-  if (!initDataProvided)
-    {
-      for (int j = 0 ; j < numResources ; j++)
-	{
-	  Available[j] = 1 + rand()%metaMax;
-	  for (int i = 0 ; i < numClients ; i++)
-	    Max[i][j] =   1+ rand()%Available[j]; 
-	}
-      // The initilized values will be written to a file for the
-      // client to read them afterwards
-      writeMaxToFile();
-    }
+    }  
 }
 
 int ServerThreads::parseCheckRequest(char Buffer[], int &clientThreadID, int *&Request) {
@@ -174,14 +242,11 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 {
   // timer from http://stackoverflow.com/questions/538609/high-resolution-timer-with-c-and-linux?lq=1
   // http://stackoverflow.com/questions/588307/c-obtaining-milliseconds-time-on-linux-clock-doesnt-seem-to-work-properl?rq=1
-
-  //TODO: regler question du chrono
-
-  /*
-    struct timespec start, end;
-    long newProcMilli, seconds, useconds;    
-    clock_gettime(CLOCK_MONOTONIC, &start);
-  */
+  
+  struct timeval start, end;
+  long newProcMilli, seconds, useconds; 
+  gettimeofday(&start, NULL);
+  
   
   // TODO: Pas certain de comprendre la relation entre 'sizeof(signed int)' et le
   //       nombre de caracteres de la requete.
@@ -191,145 +256,210 @@ void ServerThreads::processRequest(int threadID, int socketFD)
   int maxChar = 6 * (numResources + 1) + numResources;
   char Buffer[maxChar];
   bzero(Buffer, maxChar);
-  int n = read(socketFD,Buffer,maxChar-1);
+  int n = read(socketFD,Buffer,maxChar);
   if (n < 0) error("ERROR reading from socket");
 		
-  cout << "Thread " << threadID << "received the request:" << Buffer << endl;
+  cout  << " Thread " << threadID  << " received the request: " << Buffer << endl;
 	
   int *RecRequest;
   int recClientThreadID;
   int answerToClient;
   int delay;
 
-  //int ZeroGauge[numResources];
-  //bzero(ZeroGauge, numResources);
-
-  int response = parseCheckRequest(Buffer, recClientThreadID,  RecRequest);
-
-  // requete bien formee
-  if (0 < response)
-    {
-      if (ClientsReleased[recClientThreadID] || numRequestsPerClient == NumProcPerClient[recClientThreadID])
-	{
-	  //error("ERROR: client has sent a request after being fully released or beyond numRequestsPerClient");
-	  cout << "client" <<  recClientThreadID << "has sent the request" << Buffer 
-	       << "after asking resources to be fully released or beyond numRequestsPerClient: DISREGARDED" << endl;
-	  answerToClient = -1; // TODO: Anciennement 'answerToClient == NULL;'.
-	}
-      // cas liberation de ressources
-      else if (response == 2)
-	{	
-	  // TODO: check second parameter in isSmaller
-	  if(isSmallerOrEqual(RecRequest, Allocation[recClientThreadID], numRequestsPerClient))
-	    {
-	      answerToClient = 0;
-	      countOnWait --;
-	      countAccepted++;
-	      addTo(RecRequest, Available, numResources);
-	      subtractFrom(RecRequest, Allocation[recClientThreadID], numResources);
-	      cout << "request to RELEASE resources from client thread" << recClientThreadID << "ACCEPTED" << Buffer << endl;
-	    }
-	  else
-	    {
-	      answerToClient = -1;
-	      countOnWait --;
-	      countInvalid++;
-	      cout << "request to RELEASE resources from client thread" << recClientThreadID << "REJECTED: EXCESSIVE" << Buffer << endl;
-	    }
-	}
-      // cas demande de ressources
-      else if (response == 1)
-	{
-	  // ressources demandees excessives
-	  if (isExcessive(recClientThreadID, numResources, RecRequest))
-	    {
-	      answerToClient = -1;
-	      countOnWait --;
-	      countInvalid++;
-	      cout << "request to OBTAIN resources from client thread" << recClientThreadID << "REJECTED: EXCESSIVE" << Buffer << endl;
-	    }
-	  // ressources demandees non excessives
-	  else
-	    {
-	      // unsafe demand
-	      if (isNotSafe(recClientThreadID, RecRequest))
-		{
-		  delay = lastProcMilli * 10;
-		  answerToClient = delay;
-		  cout << "request to OBTAIN resources from client thread" << recClientThreadID << "DELAYED: UNSAFE" << Buffer << endl;
-		}
-	      // safe demand
-	      else
-		{
-		  answerToClient = 0;
-		  countOnWait --;
-		  countAccepted++;
-		  subtractFrom(RecRequest, Available, numResources);
-		  addTo(RecRequest, Allocation[recClientThreadID], numResources);
-		  cout << "request to OBTAIN resources from client thread" << recClientThreadID << "ACCEPTED" << Buffer << endl;
-		}
-	    } // fin ressources demandees non excessives
-	} // fin demande de ressources
-    } // fin requete bien specifiee
+  int response = parseCheckRequest(Buffer, recClientThreadID, RecRequest);
+   
   // requete mal specifiee dont l'auteur est lisible
-  else if (response == -1)
+  if (response == -1)
     {
+      cout  << " UNREADABLE request " << Buffer  << " from client thread " << recClientThreadID  << " REJECTED"  << endl;
       answerToClient = -1;
-      countOnWait --;
+      LockGuard lockcI(lock_countInvalid);	
       countInvalid++;
-      cout << "request to OBTAIN resources from client thread" << recClientThreadID << "REJECTED: UNREADABLE" << Buffer << endl;
     }
-  // requete mal specifiee dont auteur est illisible
-  else // (response == 0)
+
+  // requete mal specifiee dont l'auteur est illisible
+  else if  (response == 0)
     {
+      cout  << " request " << Buffer  << " from UNKNOWN client thread REJECTED " << endl;
       answerToClient = -1;
-      countOnWait --;
+      LockGuard lockcI(lock_countInvalid);
       countInvalid++;
-      cout << "request to OBTAIN resources from unkwnown client thread DISREGARDED" << endl;
-    }    // fin requete mal specifiee
+    }
+
+  // cas maximum de requetes deja atteint
+  else  if (numRequestsPerClient == NumProcPerClient[recClientThreadID])
+    {
+      cout  << " request " << Buffer  << " from client thread " <<  recClientThreadID  << " exceeds numRequestsPerClient: REJECTED " << endl;
+      answerToClient = -1;
+      LockGuard lockcI(lock_countInvalid);
+      countInvalid++;
+    }
+
+  // cas liberation de ressources
+  else if (response == 2)
+    {	
+
+      // premiere requete de liberation interdite
+      if (0 == NumProcPerClient[recClientThreadID])
+    {
+      cout  << " INITIAL request " << Buffer  << " from client thread " <<  recClientThreadID  << " asking to RELEASE resources: REJECTED " << endl;
+      answerToClient = -1;
+      LockGuard lockcI(lock_countInvalid);
+      countInvalid++;
+    }
+   
+    // derniere requete 
+    else if (numRequestsPerClient-1 == NumProcPerClient[recClientThreadID])
+      {
+	// la liberation est inexacte
+	LockGuard lock_Al(lock_Allocation);
+	LockGuard lock_Av(lock_Available);
+	if (!returnsExactAllocation(recClientThreadID, RecRequest))
+	  {
+	    cout  << " LAST request " << Buffer  << " from client thread " << recClientThreadID << " asking to RELEASE resources is UNEXACT: REJECTED " << endl;
+	    answerToClient = -1;
+	    LockGuard lockcI(lock_countInvalid);
+	    countInvalid++;
+            cout << "fin unexact rejected" << endl;
+	  }
+	// sinon
+	else 
+	  {
+	    cout  << " LAST request " << Buffer << " from client thread " << recClientThreadID << " asking to RELEASE resources is EXACT: ACCEPTED " << endl;
+	    answerToClient = 0;
+	    LockGuard lock_cA(lock_countAccepted);
+	    countAccepted++;
+	    subtractFromAlloc(recClientThreadID, RecRequest);
+	    addToAvail(RecRequest);
+	  }
+
+      }
+
+  // pas la derniere requete 
+    else
+      {
+	// liberation excessive
+	LockGuard lock_Al(lock_Allocation);
+	LockGuard lock_Av(lock_Available);
+	if (returnsBeyondAllocation(recClientThreadID, RecRequest))
+	  {
+	    cout  << "request " << Buffer << " from client thread " << recClientThreadID  << " asking to RELEASE resources is EXCESSIVE: REJECTED" << endl;
+	    answerToClient = -1;
+	    LockGuard lockcI(lock_countInvalid);
+	    countInvalid++;
+	  }
+	// sinon
+	else 
+	  {
+	    cout  << "request " << Buffer  << " from client thread " << recClientThreadID  << " asking to RELEASE resources ACCEPTED" << endl;
+	    answerToClient = 0;
+	    LockGuard lock_cA(lock_countAccepted);
+	    countAccepted++;
+	    subtractFromAlloc(recClientThreadID, RecRequest);
+	    addToAvail(RecRequest);
+	  }
+   }
+  }
+  // cas demande de ressources
+  else if (response == 1)
+    {
+      // derniere requete
+      if (numRequestsPerClient-1 == NumProcPerClient[recClientThreadID])
+	{
+	  cout  <<" LAST request " << Buffer  <<  " from client thread " << recClientThreadID  << " to OBTAIN resources is REJECTED" << endl;
+	  answerToClient = -1;
+	  LockGuard lockcI(lock_countInvalid);
+	  countInvalid++;
+	}
+
+      else
+	{
+	  LockGuard lock_Al(lock_Allocation);
+	  LockGuard lock_Av(lock_Available);
+	  LockGuard lock_N(lock_Need);
+	  LockGuard lock_F(lock_Finish);
+	  LockGuard lock_W(lock_Work);
+	  LockGuard lock_HA(lock_HypoAllocation);
+	  LockGuard lock_HN(lock_HypoNeed);
+	  // ressources demandees excessives
+	  if (asksBeyondMax(recClientThreadID, RecRequest))
+	    {
+	      cout  <<" request " << Buffer  << " from client thread " << recClientThreadID << " to OBTAIN resources is EXCESSIVE: REJECTED" << endl;
+	      answerToClient = -1;	  
+	      LockGuard lockcI(lock_countInvalid);    
+	      countInvalid++;	     
+	    }
+	  // ressources demandees non securitaires
+	  else  if (isNotSafe(recClientThreadID, RecRequest))
+	    {
+	      cout  << "request " << Buffer  << " from client thread " << recClientThreadID << " to OBTAIN resources is ON WAIT: UNSAFE" << endl;
+	      delay = lastProcMilli * numClients;
+	      answerToClient = delay;
+	      LockGuard lock_cOW(lock_countOnWait);
+	      countOnWait++;
+	   
+	    }
+	  // safe demand
+	  else
+	    {
+	      cout  << "request " << Buffer  << " from client thread " << recClientThreadID <<"to OBTAIN resources is ACCEPTED" << endl;
+	      answerToClient = 0;
+	      LockGuard lock_cA(lock_countAccepted);
+	      countAccepted++;
+	      subtractFromAlloc(recClientThreadID, RecRequest);
+	      addToAvail(RecRequest);    
+	    }
+	}
+    } // fin demande de ressources
+   
+  cout << "fin logic" << endl;
 		  
   n = sprintf(Buffer,"%d",answerToClient); 
   n = write(socketFD,Buffer,n);
   if (n < 0) error("ERROR writing to socket");
-	
-  if (response != 0 && read(socketFD,Buffer,255) == 0)
-    { //Nothing else to read
+	  
+  if (read(socketFD,Buffer,255) == 0)
+    { 
+      cout << "apres lecture" << endl;
+      LockGuard lock_rP(lock_requestProcesed);
       requestProcesed++;
+      LockGuard lock_NPPC(lock_NumProcPerClient);
+      LockGuard lock_cCD(lock_countClientsDispatched);
+      cout << "juste avant test" << endl;
       if (numRequestsPerClient ==  ++NumProcPerClient[recClientThreadID])
-	{
-	  countClientsDispatched++;
-
-	  for (int i = 0; i < numResources; i++)
-	    {
+	     {
+              cout << "dans le test1" << endl;
+              cout << "dans le test2" << endl;
+	      countClientsDispatched++;
+              cout << "dans le test3" << endl;
+	      LockGuard lock_Al(lock_Allocation);
+              cout << "dans le test4" << endl;
+	      for (int i = 0; i < numResources; i++)
+	        {
 	      Allocation[recClientThreadID][i] = 0;
-	    }
+	        }
+              cout << "dans le test5" << endl;
 		
-	  ClientsReleased[recClientThreadID] = true;
-
-	}
-
-      else if (isEqualToZero(Allocation[recClientThreadID], numResources))
-	{
-	  countClientsDispatched++;
-	  ClientsReleased[recClientThreadID] = true;
-	}
+	    }
     }
 
-  // TODO: regler le cas du chronometrage
-
+    cout << "apres maj compteurs" << endl;
+   
+ 
   // chronometrage
-  /*
-    clock_gettime(CLOCK_MONOTONIC, &end);
+  
+    
+     gettimeofday(&end, NULL);
     seconds  = end.tv_sec  - start.tv_sec;
-    useconds = end.tv_nsec - start.tv_nsec;
+    useconds = end.tv_usec - start.tv_usec;
     newProcMilli = ((seconds) * 1000 + useconds/1000.0) + 0.5;
-    printf("Elapsed time: %ld milliseconds\n", newProcMilli);
+    //printf("Elapsed time: %ld milliseconds\n", newProcMilli);
     // lissage exponentiel
-    double alpha = 0.5;
-    lastProcMilli = alpha * newProcMilli + (1 - alpha) * lastProcMilli;
-  */
-  lastProcMilli = 500;
+    //double alpha = 0.5;
+    //lastProcMilli = alpha * newProcMilli + (1 - alpha) * lastProcMilli;
+    lastProcMilli = newProcMilli;
 
+    cout << "fin methode processRequest" << endl; 
 }
 
 
@@ -347,9 +477,10 @@ bool ServerThreads::isNotSafe(int id, int request [])
     }
   for (int i = 0 ; i < numResources ; i++)
     {
-      Work[i] = Available[i];
-      HypoAllocation[id][i] = Allocation[id][i] + request[i];
-      HypoNeed[id][i] = Need[id][i] - request[i];
+      cout << Available[i] << " " << Allocation[id][i] << " " << request[i] << endl;
+      Work[i] = Available[i] + request[i];
+      HypoAllocation[id][i] = Allocation[id][i] - request[i];
+      HypoNeed[id][i] = Need[id][i] + request[i];
     }
   int ind = 0, solved = 0, failed = 0;
   while(solved < numClients && failed < numClients)
@@ -361,12 +492,14 @@ bool ServerThreads::isNotSafe(int id, int request [])
 	  continue;
 	}
 
-      int RowHypoNeed[numResources];
-      for (int m = 0 ; m < numResources; m++)
+	int *RowHypoNeed = new int[numResources];
+	for (int m = 0 ; m < numResources; m++)
 	{
 	  RowHypoNeed[m] = HypoNeed[ind][m];
 	}
 
+      cout << ind << "; " << ints_to_str(RowHypoNeed, numResources) << "; "
+           << ints_to_str(Work, numResources) << endl;
       if(isSmallerOrEqual(RowHypoNeed, Work, numResources))
 	{
 	  Finish[ind] = true;
@@ -381,6 +514,7 @@ bool ServerThreads::isNotSafe(int id, int request [])
 	{
 	  failed++;
 	}
+      delete RowHypoNeed;
       ind = ++ind % numClients;
     }
   if (solved == numClients)
@@ -390,17 +524,38 @@ bool ServerThreads::isNotSafe(int id, int request [])
   return value;
 }
 
-/// Change the sleep() function for a correct solution for
-/// the ending synchronization problem. The server has to let
-/// the client know that it has finished, so that the client
-/// can finish itself. HINT: Look for named pipes
+// see http://tuxthink.blogspot.ca/2012/02/inter-process-communication-using-named.html	
+// http://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
 void ServerThreads::signalFinishToClient(){
-	/// TP2_TO_DO
+	cout << "debut signal" << endl;
 	
+string name_str = i_to_str(portNumber);
+
+const char* name_char = name_str.c_str();
+if (fileExists(name_char)) remove(name_char);
 	sleep(2);
-	
-	/// TP2_END_TO_DO
+	int createdPipe;
+	createdPipe = mkfifo(name_char, 0666); 
+	if (createdPipe < 0)
+		error("ERROR creating a fifo server pipe");
+
+	cout  <<"fifo pipe " << portNumber << " created successfully" << endl;
+
+	bool finish = true;
+	int serverPipe;
+	serverPipe = open(name_char, O_RDWR);
+	if (serverPipe < 1)
+		error("ERROR opening fifo server pipe");
+
+ 	write(serverPipe, &finish, sizeof(bool));
+
+ 	cout  <<"server FINISHED message sent to client through pipe " << portNumber << endl;
+
+	close(serverPipe);
 }
+
+
+
 
 /// Do not modify this function
 /// Rather use it as an example of socket functonality
@@ -429,12 +584,14 @@ void* ServerThreads::threadCode(void * param){
 		
 		if ((time(NULL) - start) >= maxWaitTime){
 			cerr << "Time out on thread " << ID << endl;
+                        cout << "sortie max time" << endl;
 			pthread_exit(NULL);
 		}
 		
 		if (threadSocketFD > 0){
 			// Process request from connection
 			processRequest(ID,threadSocketFD);
+                        cout << "processRequest" << endl;
 			close(threadSocketFD);
 		}
 				
@@ -449,7 +606,6 @@ void* ServerThreads::threadCode(void * param){
 /// Rather use it as an example to uderstand socket functionality
 void ServerThreads::createAndStart(){
 
-// mutex_t mtx; TODO: !?!
 
 	//Create the main server socket and define a port to listen to
 	serverSocketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -471,7 +627,7 @@ void ServerThreads::createAndStart(){
 	pt_tid = new pthread_t[numServerThreads];
 	pt_attr = new pthread_attr_t[numServerThreads];
 	
-	cout << "Now waiting for clients..." << endl;
+	cout  << "Now waiting for clients... " << endl;
 	
 	//Finally create each child thread and run the function threadCode
 	for (int i = 0 ; i < numServerThreads ; i++) {
@@ -488,42 +644,44 @@ void ServerThreads::createAndStart(){
 /// the end of the client application excecution. But do not
 /// modify the results file output, as it is neccesary for evaluation
 void ServerThreads::printAndSaveResults(const char* fileName){
-	cout << endl << "------Server Results-------" << endl;
-	cout << "Requests accepted:\t\t" << countAccepted << endl;
-	cout << "Requests sent to wait:\t\t" << countOnWait << endl;
-	cout << "Invalid requests:\t\t" << countInvalid << endl;
-	cout << "Clients dispatched:\t\t" << countClientsDispatched << endl;
-	cout << "Total requests proccesed:\t" << requestProcesed << endl;
+	cout << endl  << "------Server Results-------" << endl;
+	cout  << "Requests accepted:\t\t " << countAccepted << endl;
+	cout  << "Requests sent to wait:\t\t " << countOnWait << endl;
+	cout  << "Invalid requests:\t\t " << countInvalid << endl;
+	cout  << "Clients dispatched:\t\t " << countClientsDispatched << endl;
+	cout  << "Total requests proccesed:\t " << requestProcesed << endl;
 	
 	///DO NOT MODIFY THIS PART
 	// Save the counted values for evaluation
 	if (fileExists(fileName)) remove(fileName);
 	ofstream fs(fileName);
-	fs << countAccepted << " " << countOnWait << " " << countInvalid << " " << countClientsDispatched << endl;
+	fs << countAccepted << "  " << countOnWait << " " << countInvalid << " " << countClientsDispatched << endl;
 	fs.close();
 }
 
 /// You can modify this function if you want to add other fields
 /// to the configuration field, but normally you will not need to
 void ServerThreads::readConfigurationFile(const char *fileName){	
-  if (!fileExists(fileName)) {
-    cout << "No configuration file " << fileName << " found" << endl;
-    exit(1);
-  }
+	if (!fileExists(fileName)) {
+		cout  << "No configuration file " << fileName << " found" << endl;
+		exit(1);
+	}
 	
-  libconfig::Config cfg;
-  cfg.readFile(fileName);
+	libconfig::Config cfg;
+	cfg.readFile(fileName);
 	
-  cfg.lookupValue("portNumber",portNumber);
-  cfg.lookupValue("maxWaitTime",maxWaitTime);
-  cfg.lookupValue("serverThreads",numServerThreads);
-  cfg.lookupValue("serverBacklogSize",serverBacklogSize);
-  cfg.lookupValue("numClients",numClients);
-  cfg.lookupValue("numResources",numResources);
-  cfg.lookupValue("numRequestsPerClient",numRequestsPerClient);
-  totalNumRequests = numClients*numRequestsPerClient;	
+	cfg.lookupValue("portNumber",portNumber);
+	cfg.lookupValue("maxWaitTime",maxWaitTime);
+	cfg.lookupValue("serverThreads",numServerThreads);
+	cfg.lookupValue("serverBacklogSize",serverBacklogSize);
+	cfg.lookupValue("numClients",numClients);
+	cfg.lookupValue("numResources",numResources);
+	cfg.lookupValue("availFactor",availFactor);
+	cfg.lookupValue("numRequestsPerClient",numRequestsPerClient);
+	totalNumRequests = numClients*numRequestsPerClient;
+		
 
-  //Dynamic allocation of memory (will be freed at destructor)
+ //Dynamic allocation of memory (will be freed at destructor)
   Available = new int[numResources];
   Max = new int*[numClients];
   Allocation = new int*[numClients];
@@ -543,43 +701,46 @@ void ServerThreads::readConfigurationFile(const char *fileName){
     HypoAllocation[i] = new int[numResources];
     HypoNeed[i] = new int[numResources];
   }
+
 	
-  cfg.lookupValue("initialValuesProvided",initDataProvided);
+	cfg.lookupValue("initialValuesProvided",initDataProvided);
 	
-  if (initDataProvided) {
-    //Initialize the Available and Max structures
-    libconfig::Setting& available = cfg.lookup("availableResources");
-    libconfig::Setting& maximum = cfg.lookup("maximumPerClient");
+	if (initDataProvided) {
+		//Initialize the Available and Max structures
+		libconfig::Setting& available = cfg.lookup("availableResources");
+		libconfig::Setting& maximum = cfg.lookup("maximumPerClient");
 		
-    for (int i = 0 ; i < numResources ; i++)
-      Available[i] = available[i];
+		for (int i = 0 ; i < numResources ; i++)
+			Available[i] = available[i];
 		
-    for (int i = 0 ; i < numClients ; i++){
-      for (int j = 0 ; j < numResources ; j++){
-	Max[i][j] = maximum[i][j];
-	//Verification
-	if (Max[i][j] > Available[j]){
-	  cerr << "Invalid maximumPerClient values" << endl;
-	  exit(1);
+		for (int i = 0 ; i < numClients ; i++){
+			for (int j = 0 ; j < numResources ; j++){
+				Max[i][j] = maximum[i][j];
+				//Verification
+				if (Max[i][j] > Available[j]){
+					cerr  << "Invalid maximumPerClient values" << endl;
+					exit(1);
+				}
+			}
+		}
 	}
-      }
-    }
-  }
 	
-  cout << "Server started with configuration: " << endl << endl;
-  cout << "Maximum wait time: " << maxWaitTime << endl;
-  cout << "Number of server threads: " << numServerThreads << endl;
-  cout << "Server backlog size: " << serverBacklogSize << endl;
-  cout << "Number of clients: " << numClients << endl;
-  cout << "Number of resources: " << numResources << endl ;
-  if (initDataProvided) {
-    cout << "Available resources at start:" << endl;
-    for (int i = 0 ; i < numResources ; i++)
-      cout << Available[i] << " ";
-    cout << endl << endl;
-  }
-  else
-    cout << endl << "No initial values provided, needs aditional initialization" << endl;
+	cout << "Server started with configuration: " << endl << endl;
+	cout << "Maximum wait time: " << maxWaitTime << endl;
+	cout << "Number of server threads: " << numServerThreads << endl;
+	cout << "Server backlog size: " << serverBacklogSize << endl;
+	cout << "Number of clients: " << numClients << endl;
+	cout << "Number of resources: " << numResources << endl ;
+	cout << "Resource availability factor: " << availFactor << endl ;
+	
+	if (initDataProvided) {
+		cout << "Available resources at start: " << endl;
+		for (int i = 0 ; i < numResources ; i++)
+			cout << Available[i] << " ";
+		cout << endl << endl;
+	}
+	else
+		cout << endl  << "No initial values provided, needs aditional initialization" << endl;
 }
 
 /// The rest of the code is neccesary for the correct functionality
@@ -641,6 +802,30 @@ ServerThreads::~ServerThreads(){
 
 	if (serverSocketFD == -1)
 		close(serverSocketFD);
+
+
+
+pthread_mutex_destroy(&lock_lastProcMilli);
+ pthread_mutex_destroy(&lock_serverSocketFD); 	
+  pthread_mutex_destroy(&lock_requestProcesed);  
+  pthread_mutex_destroy(&lock_Available);
+  pthread_mutex_destroy(&lock_Max);
+  pthread_mutex_destroy(&lock_Allocation);
+  pthread_mutex_destroy(&lock_Need);
+  pthread_mutex_destroy(&lock_Finish);
+  pthread_mutex_destroy(&lock_Work);
+  pthread_mutex_destroy(&lock_HypoAllocation);
+  pthread_mutex_destroy(&lock_HypoNeed);
+  pthread_mutex_destroy(&lock_NumProcPerClient);
+  pthread_mutex_destroy(&lock_ClientsReleased);
+  pthread_mutex_destroy(&lock_countAccepted);	
+  pthread_mutex_destroy(&lock_countOnWait);	
+  pthread_mutex_destroy(&lock_countInvalid);	
+  pthread_mutex_destroy(&lock_countClientsDispatched);
+
+
+
+
 }
 
 
@@ -652,6 +837,7 @@ int ServerThreads::serverSocketFD = -1;
 int ServerThreads::numResources = 0;
 int ServerThreads::numClients = 0;
 int ServerThreads::numRequestsPerClient = 0;
+int ServerThreads::availFactor = 1;
 
 // Initialization of result variables 
 int ServerThreads::countAccepted = 0;
@@ -664,10 +850,55 @@ int** ServerThreads::Max = NULL;
 int** ServerThreads::Allocation = NULL;
 int** ServerThreads::Need = NULL;
 
-int ServerThreads::lastProcMilli = 500;
+int ServerThreads::lastProcMilli = 100;
 bool* ServerThreads::Finish = NULL;
 int* ServerThreads::Work = NULL;
 int** ServerThreads::HypoAllocation = NULL;
 int** ServerThreads::HypoNeed = NULL;
 int* ServerThreads::NumProcPerClient = NULL;
 bool* ServerThreads::ClientsReleased = NULL;
+
+ pthread_mutex_t ServerThreads::lock_lastProcMilli= PTHREAD_MUTEX_INITIALIZER;
+ pthread_mutex_t ServerThreads::lock_serverSocketFD= PTHREAD_MUTEX_INITIALIZER; 	
+  pthread_mutex_t ServerThreads::lock_requestProcesed= PTHREAD_MUTEX_INITIALIZER;  
+  pthread_mutex_t ServerThreads::lock_Available= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Max= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Allocation= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Need= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Finish= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Work= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_HypoAllocation= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_HypoNeed= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_NumProcPerClient= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_ClientsReleased= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_countAccepted= PTHREAD_MUTEX_INITIALIZER;	
+  pthread_mutex_t ServerThreads::lock_countOnWait= PTHREAD_MUTEX_INITIALIZER;	
+  pthread_mutex_t ServerThreads::lock_countInvalid= PTHREAD_MUTEX_INITIALIZER;	
+  pthread_mutex_t ServerThreads::lock_countClientsDispatched= PTHREAD_MUTEX_INITIALIZER;
+
+
+
+
+ /*
+    LockGuard lock_lPC(lock_lastProcMilli);
+    LockGuard lock_rP(lock_requestProcesed);  
+    LockGuard lock_Av(lock_Available);
+    LockGuard lock_M(lock_Max);
+    LockGuard lock_Al(lock_Allocation);
+    LockGuard lock_N(lock_Need);
+    LockGuard lock_F(lock_Finish);
+    LockGuard lock_W(lock_Work);
+    LockGuard lock_HA(lock_HypoAllocation);
+    LockGuard lock_HN(lock_HypoNeed);
+    LockGuard lock_NPPC(lock_NumProcPerClient);
+    LockGuard lock_CR(lock_ClientsReleased);
+    LockGuard lock_cA(lock_countAccepted);	
+    LockGuard lock_cOW(lock_countOnWait);	
+    LockGuard lockcI(lock_countInvalid);	
+    LockGuard lock_cCD(lock_countClientsDispatched);  
+    LockGuard lock_lPC(lock_lastProcMilli);	
+    LockGuard lock_cCD(lock_countClientsDispatched);
+
+ */
+  
+

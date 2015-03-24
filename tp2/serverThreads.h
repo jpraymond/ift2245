@@ -21,15 +21,21 @@ class ServerThreads {
 	
  private:
 
-  static bool isNotSafe(int id, int Request[]);
-  static bool isExcessive(int id, int numRes, int Request[]);
-  static bool isSmallerOrEqual(int Left[], int Right[], int dim);
-  static int parseCheckRequest(char Buffer[], int &clientThreadID, int *&Request);
-  static bool isEqualToZero(int Tab[], int dim);
-  static void addTo(int First[], int Second[], int dim);
-  static void subtractFrom(int First[], int Second[], int dim);
+static int parseCheckRequest(char Buffer[], int &clientThreadId, int *&Request);
+static bool isNotSafe(int id, int Request[]);
+static bool returnsBeyondAllocation(int id, int Request[]);
+static bool returnsExactAllocation(int id, int Request[]);
+static bool asksBeyondMax(int id, int Request[]);
+static bool isSmallerOrEqual(int Left[], int Right[], int dim);
+static void addToAlloc(int id, int Request[]);
+static void addToAvail(int Request[]);
+static void subtractFromAlloc(int id, int Request[]);
+static void subtractFromAvail(int Request[]);
 
-
+//static bool isExcessive(int id, int numRes, int Request[]);
+// static bool isEqualToZero(int Tab[], int dim);
+ 
+ 
   static int lastProcMilli; // dernier temps de traitement
 
   //Internal server parameters
@@ -40,12 +46,13 @@ class ServerThreads {
   static int numClients;					// Number of different clients (threads) that will connect to the server
   static int numRequestsPerClient;		// Number of requests to be received by each client
   bool initDataProvided;
+  static int availFactor; /* positive constant used in setting the maximum availability of each resource through: maximum availability = availFactor * numResources * numClients */
 	
   static int serverSocketFD; 		// Main server Socket File Descriptor
   static int maxWaitTime; 		// Maximum number of seconds that the server program will run
   static int requestProcesed;  	// Number of request already processed
   static int totalNumRequests; 	// Total number of request to be processed (numClients*numRequestPerClient)
-		
+  		
   //Banker's Algorithm data structures (see the book for further details)
   static int *Available;
   static int **Max;
@@ -80,63 +87,71 @@ class ServerThreads {
   // usage de Lockguard garantit le deblocage du verrou a la sortie d'un bloc, meme en cas d'exception
   /*
     usage des instances de la classe LockGuard:
-    mutex_t mtx; // hors du bloc
-    LockGuard lock(mtx); // dans le bloc
+    pthread_mutex_t mtx; // hors du bloc vise
+    LockGuard lock(mtx); // a l'interieur et au debut du bloc vise
   */
-  struct mutex_t
-  {
-  public:
-  mutex_t(pthread_mutex_t & lock) : m_mutex(lock) {}
-    void Acquire()
-    {
-      pthread_mutex_lock(& m_mutex); 
-    }
-    void Release()
-    {
-      pthread_mutex_unlock(& m_mutex); 
-    }
-  private:
-    pthread_mutex_t & m_mutex;
-  };
 
   struct LockGuard
   {
   public:
-  LockGuard(mutex_t& mutex) : _ref(mutex) 
+  LockGuard(pthread_mutex_t  & mutex) : ref(mutex) 
     { 
-      _ref.Acquire();
+       pthread_mutex_lock(& ref); 
     }
     ~LockGuard() 
     { 
-      _ref.Release();
+      pthread_mutex_unlock(& ref); 
     }
-    // LockGuard(LockGuard const &) = delete;
-    // void operator=(LockGuard &) = delete;
- 
-  private:
-    LockGuard(const LockGuard&); // or use c++0x ` = delete`
 
-    mutex_t & _ref;
+   // LockGuard(LockGuard const &) = delete;
+   // void operator=(LockGuard &) = delete;
+ 
+ private:
+     LockGuard(const LockGuard&); // or use c++0x ` = delete`
+
+    pthread_mutex_t & ref;
   };
 
-  static mutex_t lock_lastProcMilli;
-  static mutex_t lock_serverSocketFD; 	
-  static mutex_t lock_requestProcesed;  
-  static mutex_t lock_Available;
-  static mutex_t lock_Max;
-  static mutex_t lock_Allocation;
-  static mutex_t lock_Need;
-  static mutex_t  lock_Finish;
-  static mutex_t lock_Work;
-  static mutex_t lock_HypoAllocation;
-  static mutex_t lock_HypoNeed;
-  static mutex_t lock_NumProcPerClient;
-  static mutex_t lock_ClientsReleased;
-  static mutex_t lock_countAccepted;	
-  static mutex_t lock_countOnWait;	
-  static mutex_t lock_countInvalid;	
-  static mutex_t lock_countClientsDispatched;
+
+
+  static pthread_mutex_t lock_lastProcMilli;
+  static pthread_mutex_t lock_serverSocketFD; 	
+  static pthread_mutex_t lock_requestProcesed;  
+  static pthread_mutex_t lock_Available;
+  static pthread_mutex_t lock_Max;
+  static pthread_mutex_t lock_Allocation;
+  static pthread_mutex_t lock_Need;
+  static pthread_mutex_t lock_Finish;
+  static pthread_mutex_t lock_Work;
+  static pthread_mutex_t lock_HypoAllocation;
+  static pthread_mutex_t lock_HypoNeed;
+  static pthread_mutex_t lock_NumProcPerClient;
+  static pthread_mutex_t lock_ClientsReleased;
+  static pthread_mutex_t lock_countAccepted;	
+  static pthread_mutex_t lock_countOnWait;	
+  static pthread_mutex_t lock_countInvalid;	
+  static pthread_mutex_t lock_countClientsDispatched;
+
 
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 #endif // SERVERTHREADS_H

@@ -9,6 +9,7 @@
 #include <string.h>
 #include <iostream>
 #include <time.h>
+#include <sys/time.h>
 //Libconfig libraries to read configuration from file
 #include <libconfig.h++>
 //Named pipes libraries
@@ -46,6 +47,14 @@ string i_to_str (int n) {
     stringstream ss;
     ss << n;
     return ss.str();
-} 
+}
+
+string ints_to_str(int integers[], int length) {
+    string str ("");
+    for (int i = 0; i < length; i++) {
+        str += (i_to_str(integers[i]) + " ");
+    }
+    return str.substr(0, str.length() - 1);
+}
 
 #endif // COMMON_H

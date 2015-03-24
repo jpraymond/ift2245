@@ -15,6 +15,7 @@ void ClientThread::additionalInitialization(){
 /// sent each request based on the parameters given.
 void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
     /// TP2_TO_DO
+
     // Les nombres de ressources a mettre dans la requete.
     int *resourceQuantities = new int[numResources]();
     
@@ -66,6 +67,7 @@ void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
     }
 
     delete resourceQuantities;
+
     /// TP2_END_TO_DO
 }
 
@@ -140,15 +142,6 @@ int ClientThread::sum(int integers[], int length) {
     return sum;
 }
 
-// TODO: Mettre dans common.h?
-string ClientThread::ints_to_str(int integers[], int length) {
-    string str ("");
-    for (int i = 0; i < length; i++) {
-        str += (i_to_str(integers[i]) + " ");
-    }
-    return str.substr(0, str.length() - 1);
-}
-
 /// This function is called by each client thread and starts
 /// a loop to do each of the numRequest requests
 /// complete the TO_DO part to make the socket conection
@@ -213,11 +206,30 @@ void *ClientThread::clientThreadCode(void * param){
 /// wait for the server to proccess all request before ending
 /// its excecution. HINT: Look for named pipes
 void ClientThread::waitUntilServerFinishes(){
-	/// TP2_TO_DO
-	
-        while (countClientsDispatched != numClients);
-	
-	/// TP2_END_TO_DO
+    /// TP2_TO_DO
+
+    // TODO: Fix.
+    /*    
+    string name_str = i_to_str(portNumber);
+    const char* name_char = name_str.c_str();
+    int serverPipe;
+    serverPipe = open(name_char, O_RDWR);
+    if (serverPipe < 1)
+        error("ERROR opening fifo server pipe");	
+    bool finished = false;
+    */
+
+    while (countClientsDispatched != numClients);
+
+    /*
+    while (!finished)
+        read(serverPipe, &finished, sizeof(bool));
+    cout << "server has sent FINISHED message to client through pipe" << portNumber << endl;
+
+    close(serverPipe);
+    */
+
+    /// TP2_END_TO_DO
 }
 
 /// You can modify this function to print other values at
