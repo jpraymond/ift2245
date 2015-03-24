@@ -17,8 +17,8 @@ void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
     /// TP2_TO_DO
     // Les nombres de ressources a mettre dans la requete.
     int *resourceQuantities = new int[numResources]();
-
     
+    // On determine le contenu de resourceQuantities.
     if (requestID == 0) { // La premiere requete.
         randomAllocations(clientID, resourceQuantities);
     }
@@ -37,7 +37,7 @@ void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
         // Le client utilise presentement une seule ressource.
         randomAllocations(clientID, resourceQuantities);
     }
-    // A ce stade, le client a l'option de faire une demande ou une
+    // A ce stade-ci, le client a l'option de faire une demande ou une
     // liberation de ressources. On 'flip' un trente sous.
     else if (rand() % 2) {
         randomAllocations(clientID, resourceQuantities);
@@ -46,19 +46,19 @@ void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
         randomReleases(clientID, resourceQuantities);
     }
     
+    // On batit la requete.
     string request = i_to_str(clientID);
     request = request + " " + ints_to_str(resourceQuantities, numResources);
 
     write(socketFD, request.c_str(), request.length());
     
     cout << "Client " << clientID << " is sending its " << requestID << " request" << endl;
-    cout << request << '\n';
+    cout << request << endl;
 
     // TODO: Gerer la reponse du serveur.
     char reply[20];
     bzero(reply, 20);
     read(socketFD, reply, 19);
-    cout << "Reply : " << reply << '\n';
 
     // On met a jour allocatedResources.
     for (int i = 0; i < numResources; i++) {
@@ -71,7 +71,7 @@ void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
 
 // TODO: Les deux fonctions suivantes ont beaucoup en commun ...
 
-void ClientThread::randomAllocations(int clientID, int *allocations) {
+void ClientThread::randomAllocations(int clientID, int allocations[]) {
     bool atLeastOne = false;
     do {
         for (int i = 0; i < numResources; i++) {
@@ -89,7 +89,7 @@ void ClientThread::randomAllocations(int clientID, int *allocations) {
     } while (!atLeastOne );    
 }
 
-void ClientThread::randomReleases(int clientID, int *releases) {
+void ClientThread::randomReleases(int clientID, int releases[]) {
     bool atLeastOne = false;
     bool notEverything = false;
     do {
@@ -122,17 +122,17 @@ bool ClientThread::allocationPossible(int clientID) {
 bool ClientThread::releasePossible(int clientID) {
     // Une liberation partielle des ressources est possible si le client
     // utilise presentement au moins deux ressources.
-    return sum(allocatedResources[clientID], numResources) > 1;
+    return sum(allocatedResources[clientID], numResources) > 2;
 }
 
 // TODO: Ecrire un ensemble de fonctions pour faire des operations generiques
 //       sur des vecteurs et les utiliser aussi dans le code du serveur.
 //
-//       Re-ecrire le code des fonctions precedentes en utlisant de telles
+//       Re-ecrire le code des fonctions precedentes en utilisant de telles
 //       fonctions.
 //
 //       Jeter un coup d'oeil a la classe vector.
-int ClientThread::sum(int *integers, int length) {
+int ClientThread::sum(int integers[], int length) {
     int sum = 0;
     for (int i = 0; i < length; i++) {
         sum += integers[i];
@@ -141,7 +141,7 @@ int ClientThread::sum(int *integers, int length) {
 }
 
 // TODO: Mettre dans common.h?
-string ClientThread::ints_to_str(int *integers, int length) {
+string ClientThread::ints_to_str(int integers[], int length) {
     string str ("");
     for (int i = 0; i < length; i++) {
         str += (i_to_str(integers[i]) + " ");

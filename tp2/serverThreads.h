@@ -24,7 +24,7 @@ class ServerThreads {
   static bool isNotSafe(int id, int Request[]);
   static bool isExcessive(int id, int numRes, int Request[]);
   static bool isSmallerOrEqual(int Left[], int Right[], int dim);
-  static int parseCheckRequest(char Buffer[], int clientThreadId, int Request[]);
+  static int parseCheckRequest(char Buffer[], int &clientThreadID, int *&Request);
   static bool isEqualToZero(int Tab[], int dim);
   static void addTo(int First[], int Second[], int dim);
   static void subtractFrom(int First[], int Second[], int dim);

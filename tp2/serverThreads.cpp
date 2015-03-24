@@ -103,51 +103,70 @@ void ServerThreads::initializationOfDataStructures()
     }
 }
 
+int ServerThreads::parseCheckRequest(char Buffer[], int &clientThreadID, int *&Request) {
+  istringstream iss(Buffer);  
+  int token;
 
-int ServerThreads::parseCheckRequest(char Buffer[], int clientThreadID, int Request[])
-{ 
-  istringstream iss(Buffer);
-  char * token;
-  char * error;
-  if (!(iss >> token))
-    {
-      cout <<  "unaccceptable request: EMPTY" << endl;
-      return 0;
+  // On recupere clientThreadID.
+  int localClientThreadID;
+  if (!(iss >> token)) {
+    return 0;
+  }
+  if (token < 0 || token >= numClients) {
+    return 0;
+  }
+  localClientThreadID = token;
+
+  /** =====================================================================
+  On recupere le contenu de Request.
+  ---------------------------------------------------------------------- */
+  int* localRequest = new int[numResources];
+  int isPositive = 0; // Indetermine (-1 ==> faux, 1 => vrai).
+  bool isOK = true;
+  
+  int i = 0;
+  while (iss >> token) {    
+    // On s'assure que les quantites sont soit toutes positives soit toutes
+    // negatives.
+    if (isPositive != 0) {
+      if (isPositive > 0) {
+        if (token < 0) {
+          isOK = false;
+        }
+      }
+      else { // isPositive < 0
+        if (token > 0) {
+          isOK = false;
+        }
+      }
     }
-  clientThreadID = strtol(token, &error, 10);
-  if (*error || clientThreadID < 0)
-    {
-      cout <<  "unaccceptable request: unreadable or negative client thread ID" << error << endl;
-      return 0;
-    } 
-  int ind = 0;
-  int pos = 0;	
-  while(iss >> token)
-    {   
-      Request[ind] = strtol(token, &error, 10);
-      if (*error)
-	{
-	  cout <<  "unaccceptable request: unreadable resource amount demanded" << error << endl;
-	  return -1;
-	}
-        if (Request[ind] >= 0)
-	pos++;
-      ind++;
+    else { // isPositive n'est toujours pas determine.
+      if (token > 0) {
+        isPositive = 1;
+      }
+      else if (token < 0) {
+        isPositive = -1;
+      }
     }
-  if (ind > pos && pos != 0)
-    {
-      cout <<  "unaccceptable request: mixed signs" << endl;
-      return -1;
-    }
-  if (ind != numResources)
-    {
-      cout <<  "unaccceptable request: wrong number of resources" << ind << endl;
-      return -1;
-    }
-  if (pos == 0)
-    return 1;
-  else 
-    return 2;
+    localRequest[i] = token;
+    i++;
+  }
+  
+  if (i != numResources) {
+    isOK = false;
+  }
+
+  if (!isOK) {
+    delete localRequest;
+    return -1;
+  }
+  /** ================================================================== */
+
+  // Requete conforme. On prepare clientThreadID et Request.
+  clientThreadID = localClientThreadID;
+  Request = localRequest;
+
+  return (isPositive > 0) + 1;
 }
 
 
@@ -163,15 +182,21 @@ void ServerThreads::processRequest(int threadID, int socketFD)
     long newProcMilli, seconds, useconds;    
     clock_gettime(CLOCK_MONOTONIC, &start);
   */
-  int maxChar = sizeof(signed int) * (numResources + 1) + numResources + 1;
+  
+  // TODO: Pas certain de comprendre la relation entre 'sizeof(signed int)' et le
+  //       nombre de caracteres de la requete.
+  // int maxChar = sizeof(signed int) * (numResources + 1) + numResources + 1;
+  
+  // Utilisons plutot 6 digits par clientID/quantite (-99999 a 999999) + les espaces.
+  int maxChar = 6 * (numResources + 1) + numResources;
   char Buffer[maxChar];
   bzero(Buffer, maxChar);
-  int n = read(socketFD,Buffer,maxChar);
+  int n = read(socketFD,Buffer,maxChar-1);
   if (n < 0) error("ERROR reading from socket");
 		
   cout << "Thread " << threadID << "received the request:" << Buffer << endl;
 	
-  int RecRequest[numResources];
+  int *RecRequest;
   int recClientThreadID;
   int answerToClient;
   int delay;
@@ -180,7 +205,7 @@ void ServerThreads::processRequest(int threadID, int socketFD)
   //bzero(ZeroGauge, numResources);
 
   int response = parseCheckRequest(Buffer, recClientThreadID,  RecRequest);
-   
+
   // requete bien formee
   if (0 < response)
     {
@@ -189,7 +214,7 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	  //error("ERROR: client has sent a request after being fully released or beyond numRequestsPerClient");
 	  cout << "client" <<  recClientThreadID << "has sent the request" << Buffer 
 	       << "after asking resources to be fully released or beyond numRequestsPerClient: DISREGARDED" << endl;
-	  answerToClient == NULL;
+	  answerToClient = -1; // TODO: Anciennement 'answerToClient == NULL;'.
 	}
       // cas liberation de ressources
       else if (response == 2)
@@ -424,7 +449,7 @@ void* ServerThreads::threadCode(void * param){
 /// Rather use it as an example to uderstand socket functionality
 void ServerThreads::createAndStart(){
 
-mutex_t mtx;
+// mutex_t mtx; TODO: !?!
 
 	//Create the main server socket and define a port to listen to
 	serverSocketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -615,7 +640,7 @@ ServerThreads::~ServerThreads(){
 	}
 
 	if (serverSocketFD == -1)
-		close(serverSocketFD);	
+		close(serverSocketFD);
 }
 
 
@@ -646,12 +671,3 @@ int** ServerThreads::HypoAllocation = NULL;
 int** ServerThreads::HypoNeed = NULL;
 int* ServerThreads::NumProcPerClient = NULL;
 bool* ServerThreads::ClientsReleased = NULL;
-
-
-
-
-
-
-
-
-
