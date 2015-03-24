@@ -50,15 +50,15 @@ private:
 	//Function that will be called by every client thread
 	static void *clientThreadCode(void * param);
 
-        static void randomAllocations(int clientID, int *allocations);
-        static void randomReleases(int clientID, int *releases);
+        static void randomAllocations(int clientID, int allocations[]);
+        static void randomReleases(int clientID, int releases[]);
 
         static bool allocationPossible(int clientID);
         static bool releasePossible(int clientID);
 
-        static int sum(int *integers, int length);
+        static int sum(int integers[], int length);
 
-        static std::string ints_to_str(int *integers, int length);
+        static std::string ints_to_str(int integers[], int length);
 };
 
 #endif // CLIENTTHREAD_H
