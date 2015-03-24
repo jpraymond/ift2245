@@ -2,13 +2,16 @@
 #include "common.h"
 
 
+
+// methodes auxiliaires
+
 bool ServerThreads::isExcessive(int id, int numRes, int request[])
 {
   bool value = false;
   for (int i = 0 ; i < numRes ; i++)
-    {
+  {
       if (Allocation[id][i] - request[i] > Max[id][i])
-	{
+  	{
 	  value = true;
 	  break;
 	}
@@ -16,15 +19,13 @@ bool ServerThreads::isExcessive(int id, int numRes, int request[])
   return value;
 }
 
-
 void ServerThreads::addTo(int First[], int Second[], int dim)
 {
   for (int i = 0; i < dim; i++)
     {
       Second[i] += First[i];    
     }
-}
-
+ }
 
 void ServerThreads::subtractFrom(int First[], int Second[], int dim)
 {
@@ -32,8 +33,7 @@ void ServerThreads::subtractFrom(int First[], int Second[], int dim)
     {
       Second[i] -= First[i];    
     }
-}
-
+ }
 
 bool ServerThreads::isSmallerOrEqual(int Left[], int Right[], int dim)
 {
@@ -48,7 +48,6 @@ bool ServerThreads::isSmallerOrEqual(int Left[], int Right[], int dim)
     }
   return value;
 }
-
 
 bool ServerThreads::isEqualToZero(int Tab[], int dim)
 {
@@ -67,9 +66,9 @@ bool ServerThreads::isEqualToZero(int Tab[], int dim)
 
 void ServerThreads::initializationOfDataStructures()
 {
-  //TODO configurer correctement metaMax
-  int metaMax = 100;
-  //printf("intit 0");
+//TODO configurer correctement metaMax
+	int metaMax = 100;
+
   for (int i = 0 ; i < numClients ; i++)
     {
       Finish[i] = NULL;
@@ -82,55 +81,61 @@ void ServerThreads::initializationOfDataStructures()
 	  HypoAllocation[i][j] = 0;
 	  HypoNeed[i][j] = 0;
 	}
-    } 
-  //printf("intit 1");
+    }  
+
   for (int i = 0 ; i < numResources ; i++)
     {
       Work[i] = 0;
     }
-  // printf("intit 2");
+
   if (!initDataProvided)
     {
       for (int j = 0 ; j < numResources ; j++)
 	{
+	  
 	  Available[j] = 1 + rand()%metaMax;
 	  for (int i = 0 ; i < numClients ; i++)
 	    Max[i][j] =   1+ rand()%Available[j]; 
 	}
-      // The initilized values will be written to a file for the
+          // The initilized values will be written to a file for the
       // client to read them afterwards
       writeMaxToFile();
     }
 }
 
-
 int ServerThreads::parseCheckRequest(char Buffer[], int clientThreadID, int Request[])
-{ 
-  istringstream iss(Buffer);
-  char * token;
-  char * error;
-  if (!(iss >> token))
-    {
+{
+	istringstream iss(Buffer);
+	char * token;
+	char * error;
+
+ if (!(iss >> token))
+   	 {
       cout <<  "unaccceptable request: EMPTY" << endl;
       return 0;
-    }
+	}
+
   clientThreadID = strtol(token, &error, 10);
   if (*error || clientThreadID < 0)
-    {
-      cout <<  "unaccceptable request: unreadable or negative client thread ID" << error << endl;
-      return 0;
-    } 
+	{
+	cout <<  "unaccceptable request: unreadable or negative client thread ID" << error << endl;
+	return 0;
+	}
+  
+ 
   int ind = 0;
-  int pos = 0;	
+  int pos = 0;
+	
   while(iss >> token)
     {   
-      Request[ind] = strtol(token, &error, 10);
-      if (*error)
+	 Request[ind] = strtol(token, &error, 10);
+  	if (*error)
 	{
-	  cout <<  "unaccceptable request: unreadable resource amount demanded" << error << endl;
-	  return -1;
+	cout <<  "unaccceptable request: unreadable resource amount demanded" << error << endl;
+	return -1;
 	}
-        if (Request[ind] >= 0)
+  
+      if (Request[ind] >= 0)
 	pos++;
       ind++;
     }
@@ -144,10 +149,10 @@ int ServerThreads::parseCheckRequest(char Buffer[], int clientThreadID, int Requ
       cout <<  "unaccceptable request: wrong number of resources" << ind << endl;
       return -1;
     }
-  if (pos == 0)
-    return 1;
-  else 
-    return 2;
+	if (pos == 0)
+ 	 return 1;
+	else 
+	return 2;
 }
 
 
@@ -156,13 +161,13 @@ void ServerThreads::processRequest(int threadID, int socketFD)
   // timer from http://stackoverflow.com/questions/538609/high-resolution-timer-with-c-and-linux?lq=1
   // http://stackoverflow.com/questions/588307/c-obtaining-milliseconds-time-on-linux-clock-doesnt-seem-to-work-properl?rq=1
 
-  //TODO: regler question du chrono
+//TODO: regler question du chrono
 
-  /*
-    struct timespec start, end;
-    long newProcMilli, seconds, useconds;    
-    clock_gettime(CLOCK_MONOTONIC, &start);
-  */
+/*
+  struct timespec start, end;
+  long newProcMilli, seconds, useconds;    
+  clock_gettime(CLOCK_MONOTONIC, &start);
+*/
   int maxChar = sizeof(signed int) * (numResources + 1) + numResources + 1;
   char Buffer[maxChar];
   bzero(Buffer, maxChar);
@@ -176,32 +181,59 @@ void ServerThreads::processRequest(int threadID, int socketFD)
   int answerToClient;
   int delay;
 
-  //int ZeroGauge[numResources];
-  //bzero(ZeroGauge, numResources);
-
-  int response = parseCheckRequest(Buffer, recClientThreadID,  RecRequest);
+int response = parseCheckRequest(Buffer, recClientThreadID,  RecRequest);
+{
+ 
+ 
+LockGuard lock_lPC(lock_lastProcMilli);
+ //LockGuard lock3(lock_serverSocketFD); 	
+  LockGuard lock_rP(lock_requestProcesed);  
+  LockGuard lock_Av(lock_Available);
+  LockGuard lock_M(lock_Max);
+  LockGuard lock_Al(lock_Allocation);
+  LockGuard lock_N(lock_Need);
+  LockGuard lock_F(lock_Finish);
+  LockGuard lock_W(lock_Work);
+  LockGuard lock_HA(lock_HypoAllocation);
+  LockGuard lock_HN(lock_HypoNeed);
+  LockGuard lock_NPPC(lock_NumProcPerClient);
+  LockGuard lock_CR(lock_ClientsReleased);
+  LockGuard lock_cA(lock_countAccepted);	
+  LockGuard lock_cOW(lock_countOnWait);	
+  LockGuard lockcI(lock_countInvalid);	
+  LockGuard lock_cCD(lock_countClientsDispatched);
+ 
    
+ 
   // requete bien formee
   if (0 < response)
     {
+
+
+
       if (ClientsReleased[recClientThreadID] || numRequestsPerClient == NumProcPerClient[recClientThreadID])
 	{
 	  //error("ERROR: client has sent a request after being fully released or beyond numRequestsPerClient");
-	  cout << "client" <<  recClientThreadID << "has sent the request" << Buffer 
-	       << "after asking resources to be fully released or beyond numRequestsPerClient: DISREGARDED" << endl;
-	  answerToClient == NULL;
+	cout << "client" <<  recClientThreadID << "has sent the request" << Buffer 
+	<< "after asking resources to be fully released or beyond numRequestsPerClient: DISREGARDED" << endl;
+
+	answerToClient == NULL;
+
 	}
       // cas liberation de ressources
       else if (response == 2)
 	{	
-	  // TODO: check second parameter in isSmaller
+
+	// TODO: check second parameter in isSmaller
 	  if(isSmallerOrEqual(RecRequest, Allocation[recClientThreadID], numRequestsPerClient))
 	    {
 	      answerToClient = 0;
 	      countOnWait --;
 	      countAccepted++;
+
 	      addTo(RecRequest, Available, numResources);
 	      subtractFrom(RecRequest, Allocation[recClientThreadID], numResources);
+
 	      cout << "request to RELEASE resources from client thread" << recClientThreadID << "ACCEPTED" << Buffer << endl;
 	    }
 	  else
@@ -254,19 +286,25 @@ void ServerThreads::processRequest(int threadID, int socketFD)
       countInvalid++;
       cout << "request to OBTAIN resources from client thread" << recClientThreadID << "REJECTED: UNREADABLE" << Buffer << endl;
     }
-  // requete mal specifiee dont auteur est illisible
+
+// requete mal specifiee dont auteur est illisible
   else // (response == 0)
     {
       answerToClient = -1;
       countOnWait --;
       countInvalid++;
       cout << "request to OBTAIN resources from unkwnown client thread DISREGARDED" << endl;
-    }    // fin requete mal specifiee
+    }
+
+ // fin requete mal specifiee
 		  
   n = sprintf(Buffer,"%d",answerToClient); 
   n = write(socketFD,Buffer,n);
   if (n < 0) error("ERROR writing to socket");
 	
+  // This part lets the server know how many request it has
+  // processed so far, so that it can finish when all the 
+  // excpected requests have been proccesed.
   if (response != 0 && read(socketFD,Buffer,255) == 0)
     { //Nothing else to read
       requestProcesed++;
@@ -274,10 +312,10 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	{
 	  countClientsDispatched++;
 
-	  for (int i = 0; i < numResources; i++)
-	    {
-	      Allocation[recClientThreadID][i] = 0;
-	    }
+	for (int i = 0; i < numResources; i++)
+	{
+	Allocation[recClientThreadID][i] = 0;
+	}
 		
 	  ClientsReleased[recClientThreadID] = true;
 
@@ -287,23 +325,23 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	{
 	  countClientsDispatched++;
 	  ClientsReleased[recClientThreadID] = true;
-	}
+     	}
     }
-
-  // TODO: regler le cas du chronometrage
+}
+// TODO: regler le cas du chronometrage
 
   // chronometrage
-  /*
-    clock_gettime(CLOCK_MONOTONIC, &end);
-    seconds  = end.tv_sec  - start.tv_sec;
-    useconds = end.tv_nsec - start.tv_nsec;
-    newProcMilli = ((seconds) * 1000 + useconds/1000.0) + 0.5;
-    printf("Elapsed time: %ld milliseconds\n", newProcMilli);
-    // lissage exponentiel
-    double alpha = 0.5;
-    lastProcMilli = alpha * newProcMilli + (1 - alpha) * lastProcMilli;
-  */
-  lastProcMilli = 500;
+/*
+  clock_gettime(CLOCK_MONOTONIC, &end);
+  seconds  = end.tv_sec  - start.tv_sec;
+  useconds = end.tv_nsec - start.tv_nsec;
+  newProcMilli = ((seconds) * 1000 + useconds/1000.0) + 0.5;
+  printf("Elapsed time: %ld milliseconds\n", newProcMilli);
+  // lissage exponentiel
+  double alpha = 0.5;
+  lastProcMilli = alpha * newProcMilli + (1 - alpha) * lastProcMilli;
+*/
+ lastProcMilli = 500;
 
 }
 
@@ -336,10 +374,10 @@ bool ServerThreads::isNotSafe(int id, int request [])
 	  continue;
 	}
 
-      int RowHypoNeed[numResources];
-      for (int m = 0 ; m < numResources; m++)
+	int RowHypoNeed[numResources];
+	for (int m = 0 ; m < numResources; m++)
 	{
-	  RowHypoNeed[m] = HypoNeed[ind][m];
+	RowHypoNeed[m] = HypoNeed[ind][m];
 	}
 
       if(isSmallerOrEqual(RowHypoNeed, Work, numResources))
@@ -357,7 +395,7 @@ bool ServerThreads::isNotSafe(int id, int request [])
 	  failed++;
 	}
       ind = ++ind % numClients;
-    }
+	}
   if (solved == numClients)
     {
       value = false;
@@ -365,17 +403,37 @@ bool ServerThreads::isNotSafe(int id, int request [])
   return value;
 }
 
-/// Change the sleep() function for a correct solution for
-/// the ending synchronization problem. The server has to let
-/// the client know that it has finished, so that the client
-/// can finish itself. HINT: Look for named pipes
+// see http://tuxthink.blogspot.ca/2012/02/inter-process-communication-using-named.html	
+// http://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
 void ServerThreads::signalFinishToClient(){
-	/// TP2_TO_DO
 	
+string name_str = i_to_str(portNumber);
+
+const char* name_char = name_str.c_str();
+
 	sleep(2);
-	
-	/// TP2_END_TO_DO
+	int createdPipe;
+	createdPipe = mkfifo(name_char, 0666); 
+	if (createdPipe < 0)
+		error("ERROR creating a fifo server pipe");
+
+	cout << "fifo pipe" << portNumber << "created successfully" << endl;
+
+	bool finish = true;
+	int serverPipe;
+	serverPipe = open(name_char, O_RDWR);
+	if (serverPipe < 1)
+		error("ERROR opening fifo server pipe");
+
+ 	write(serverPipe, &finish, sizeof(bool));
+
+ 	cout << "server FINISHED message sent to client through pipe" << portNumber << endl;
+
+	close(serverPipe);
 }
+
+
+
 
 /// Do not modify this function
 /// Rather use it as an example of socket functonality
@@ -424,7 +482,6 @@ void* ServerThreads::threadCode(void * param){
 /// Rather use it as an example to uderstand socket functionality
 void ServerThreads::createAndStart(){
 
-mutex_t mtx;
 
 	//Create the main server socket and define a port to listen to
 	serverSocketFD = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
@@ -481,24 +538,26 @@ void ServerThreads::printAndSaveResults(const char* fileName){
 /// You can modify this function if you want to add other fields
 /// to the configuration field, but normally you will not need to
 void ServerThreads::readConfigurationFile(const char *fileName){	
-  if (!fileExists(fileName)) {
-    cout << "No configuration file " << fileName << " found" << endl;
-    exit(1);
-  }
+	if (!fileExists(fileName)) {
+		cout << "No configuration file " << fileName << " found" << endl;
+		exit(1);
+	}
 	
-  libconfig::Config cfg;
-  cfg.readFile(fileName);
+	libconfig::Config cfg;
+	cfg.readFile(fileName);
 	
-  cfg.lookupValue("portNumber",portNumber);
-  cfg.lookupValue("maxWaitTime",maxWaitTime);
-  cfg.lookupValue("serverThreads",numServerThreads);
-  cfg.lookupValue("serverBacklogSize",serverBacklogSize);
-  cfg.lookupValue("numClients",numClients);
-  cfg.lookupValue("numResources",numResources);
-  cfg.lookupValue("numRequestsPerClient",numRequestsPerClient);
-  totalNumRequests = numClients*numRequestsPerClient;	
+	cfg.lookupValue("portNumber",portNumber);
+	cfg.lookupValue("maxWaitTime",maxWaitTime);
+	cfg.lookupValue("serverThreads",numServerThreads);
+	cfg.lookupValue("serverBacklogSize",serverBacklogSize);
+	cfg.lookupValue("numClients",numClients);
+	cfg.lookupValue("numResources",numResources);
+	cfg.lookupValue("numRequestsPerClient",numRequestsPerClient);
+	totalNumRequests = numClients*numRequestsPerClient;
+	
+	
 
-  //Dynamic allocation of memory (will be freed at destructor)
+ //Dynamic allocation of memory (will be freed at destructor)
   Available = new int[numResources];
   Max = new int*[numClients];
   Allocation = new int*[numClients];
@@ -518,43 +577,44 @@ void ServerThreads::readConfigurationFile(const char *fileName){
     HypoAllocation[i] = new int[numResources];
     HypoNeed[i] = new int[numResources];
   }
+
 	
-  cfg.lookupValue("initialValuesProvided",initDataProvided);
+	cfg.lookupValue("initialValuesProvided",initDataProvided);
 	
-  if (initDataProvided) {
-    //Initialize the Available and Max structures
-    libconfig::Setting& available = cfg.lookup("availableResources");
-    libconfig::Setting& maximum = cfg.lookup("maximumPerClient");
+	if (initDataProvided) {
+		//Initialize the Available and Max structures
+		libconfig::Setting& available = cfg.lookup("availableResources");
+		libconfig::Setting& maximum = cfg.lookup("maximumPerClient");
 		
-    for (int i = 0 ; i < numResources ; i++)
-      Available[i] = available[i];
+		for (int i = 0 ; i < numResources ; i++)
+			Available[i] = available[i];
 		
-    for (int i = 0 ; i < numClients ; i++){
-      for (int j = 0 ; j < numResources ; j++){
-	Max[i][j] = maximum[i][j];
-	//Verification
-	if (Max[i][j] > Available[j]){
-	  cerr << "Invalid maximumPerClient values" << endl;
-	  exit(1);
+		for (int i = 0 ; i < numClients ; i++){
+			for (int j = 0 ; j < numResources ; j++){
+				Max[i][j] = maximum[i][j];
+				//Verification
+				if (Max[i][j] > Available[j]){
+					cerr << "Invalid maximumPerClient values" << endl;
+					exit(1);
+				}
+			}
+		}
 	}
-      }
-    }
-  }
 	
-  cout << "Server started with configuration: " << endl << endl;
-  cout << "Maximum wait time: " << maxWaitTime << endl;
-  cout << "Number of server threads: " << numServerThreads << endl;
-  cout << "Server backlog size: " << serverBacklogSize << endl;
-  cout << "Number of clients: " << numClients << endl;
-  cout << "Number of resources: " << numResources << endl ;
-  if (initDataProvided) {
-    cout << "Available resources at start:" << endl;
-    for (int i = 0 ; i < numResources ; i++)
-      cout << Available[i] << " ";
-    cout << endl << endl;
-  }
-  else
-    cout << endl << "No initial values provided, needs aditional initialization" << endl;
+	cout << "Server started with configuration: " << endl << endl;
+	cout << "Maximum wait time: " << maxWaitTime << endl;
+	cout << "Number of server threads: " << numServerThreads << endl;
+	cout << "Server backlog size: " << serverBacklogSize << endl;
+	cout << "Number of clients: " << numClients << endl;
+	cout << "Number of resources: " << numResources << endl ;
+	if (initDataProvided) {
+		cout << "Available resources at start:" << endl;
+		for (int i = 0 ; i < numResources ; i++)
+			cout << Available[i] << " ";
+		cout << endl << endl;
+	}
+	else
+		cout << endl << "No initial values provided, needs aditional initialization" << endl;
 }
 
 /// The rest of the code is neccesary for the correct functionality
@@ -615,7 +675,31 @@ ServerThreads::~ServerThreads(){
 	}
 
 	if (serverSocketFD == -1)
-		close(serverSocketFD);	
+		close(serverSocketFD);
+
+
+
+pthread_mutex_destroy(&lock_lastProcMilli);
+ pthread_mutex_destroy(&lock_serverSocketFD); 	
+  pthread_mutex_destroy(&lock_requestProcesed);  
+  pthread_mutex_destroy(&lock_Available);
+  pthread_mutex_destroy(&lock_Max);
+  pthread_mutex_destroy(&lock_Allocation);
+  pthread_mutex_destroy(&lock_Need);
+  pthread_mutex_destroy(&lock_Finish);
+  pthread_mutex_destroy(&lock_Work);
+  pthread_mutex_destroy(&lock_HypoAllocation);
+  pthread_mutex_destroy(&lock_HypoNeed);
+  pthread_mutex_destroy(&lock_NumProcPerClient);
+  pthread_mutex_destroy(&lock_ClientsReleased);
+  pthread_mutex_destroy(&lock_countAccepted);	
+  pthread_mutex_destroy(&lock_countOnWait);	
+  pthread_mutex_destroy(&lock_countInvalid);	
+  pthread_mutex_destroy(&lock_countClientsDispatched);
+
+
+
+
 }
 
 
@@ -647,10 +731,23 @@ int** ServerThreads::HypoNeed = NULL;
 int* ServerThreads::NumProcPerClient = NULL;
 bool* ServerThreads::ClientsReleased = NULL;
 
-
-
-
-
+ pthread_mutex_t ServerThreads::lock_lastProcMilli= PTHREAD_MUTEX_INITIALIZER;
+ pthread_mutex_t ServerThreads::lock_serverSocketFD= PTHREAD_MUTEX_INITIALIZER; 	
+  pthread_mutex_t ServerThreads::lock_requestProcesed= PTHREAD_MUTEX_INITIALIZER;  
+  pthread_mutex_t ServerThreads::lock_Available= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Max= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Allocation= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Need= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Finish= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_Work= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_HypoAllocation= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_HypoNeed= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_NumProcPerClient= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_ClientsReleased= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_countAccepted= PTHREAD_MUTEX_INITIALIZER;	
+  pthread_mutex_t ServerThreads::lock_countOnWait= PTHREAD_MUTEX_INITIALIZER;	
+  pthread_mutex_t ServerThreads::lock_countInvalid= PTHREAD_MUTEX_INITIALIZER;	
+  pthread_mutex_t ServerThreads::lock_countClientsDispatched= PTHREAD_MUTEX_INITIALIZER;
 
 
 
