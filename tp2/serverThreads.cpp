@@ -293,6 +293,10 @@ void ServerThreads::processRequest(int threadID, int socketFD)
     }
 
   // cas maximum de requetes deja atteint
+
+  else if (true)
+    {
+    LockGuard lock_NPPC(lock_NumProcPerClient);
   else  if (numRequestsPerClient == NumProcPerClient[recClientThreadID])
     {
       cout  << " request " << Buffer  << " from client thread " <<  recClientThreadID  << " exceeds numRequestsPerClient: REJECTED " << endl;
@@ -300,11 +304,12 @@ void ServerThreads::processRequest(int threadID, int socketFD)
       LockGuard lockcI(lock_countInvalid);
       countInvalid++;
     }
+    }
 
   // cas liberation de ressources
   else if (response == 2)
     {	
-
+    LockGuard lock_NPPC(lock_NumProcPerClient);
       // premiere requete de liberation interdite
       if (0 == NumProcPerClient[recClientThreadID])
     {
@@ -313,7 +318,7 @@ void ServerThreads::processRequest(int threadID, int socketFD)
       LockGuard lockcI(lock_countInvalid);
       countInvalid++;
     }
-   
+
     // derniere requete 
     else if (numRequestsPerClient-1 == NumProcPerClient[recClientThreadID])
       {
