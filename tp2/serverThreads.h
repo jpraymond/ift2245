@@ -33,7 +33,7 @@ static void subtractFromAlloc(int id, int Request[]);
 static void subtractFromAvail(int Request[]);
 
 //static bool isExcessive(int id, int numRes, int Request[]);
-// static bool isEqualToZero(int Tab[], int dim);
+static bool isEqualToZero(int Tab[], int dim);
  
  
   static int lastProcMilli; // dernier temps de traitement
@@ -63,7 +63,7 @@ static void subtractFromAvail(int Request[]);
   static int **HypoAllocation;
   static int **HypoNeed;
   static int *NumProcPerClient;
-  static bool *ClientsReleased;
+  static bool *ClientsAccomodated;
 
   // Results variables
   static int countAccepted;		// Result counter for total acepted requests
@@ -126,7 +126,7 @@ static void subtractFromAvail(int Request[]);
   static pthread_mutex_t lock_HypoAllocation;
   static pthread_mutex_t lock_HypoNeed;
   static pthread_mutex_t lock_NumProcPerClient;
-  static pthread_mutex_t lock_ClientsReleased;
+  static pthread_mutex_t lock_ClientsAccomodated;
   static pthread_mutex_t lock_countAccepted;	
   static pthread_mutex_t lock_countOnWait;	
   static pthread_mutex_t lock_countInvalid;	

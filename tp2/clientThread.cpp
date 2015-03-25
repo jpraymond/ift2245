@@ -1,6 +1,10 @@
 #include "clientThread.h"
 #include "common.h"
 
+
+// TODO: Utiliser la technique RAII ici aussi pour eviter la bataille des
+//       ressources.
+
 /// If you need to initialize something else
 /// use this function that is called only one time
 /// before all the threads start
@@ -63,7 +67,6 @@ int ClientThread::sendRequest(int clientID, int requestID, int socketFD,
     string request = i_to_str(clientID) +
                      " " +
                      ints_to_str(requestQuantities, numResources);
-    // cout << request << endl;
 
     write(socketFD, request.c_str(), request.length());
     
@@ -85,7 +88,7 @@ int ClientThread::sendRequest(int clientID, int requestID, int socketFD,
         countAccepted++;
         pthread_mutex_unlock(&mutexCountAccepted);
     }
-    else if (response > 0) { // Requete 'onWait'.        
+    else if (response > 0) { // Requete mise en attente. 
         pthread_mutex_lock(&mutexCountOnWait);
         countOnWait++;
         pthread_mutex_unlock(&mutexCountOnWait);
@@ -118,7 +121,7 @@ void ClientThread::randomAllocations(int clientID, int allocations[]) {
                 }
             }
         }            
-    } while (!atLeastOne );    
+    } while (!atLeastOne );
 }
 
 void ClientThread::randomReleases(int clientID, int releases[]) {
@@ -216,9 +219,19 @@ void *ClientThread::clientThreadCode(void * param){
               server->h_length);
         serv_addr.sin_port = htons(portNumber);
 
-        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-            error("ERROR connecting"); 
-        }
+        // bool success = false;
+        // while (!success) {
+            if (connect(sockfd,
+                        (struct sockaddr *) &serv_addr,
+                        sizeof(serv_addr))
+                < 0) {
+                // cout << "ERROR connecting. We retry." << endl;   
+                error("ERROR connecting"); 
+        //    }
+        //    else {
+        //        success = true;
+            }
+        // }
         /** ====================================================================== */
         
         int response = sendRequest(clientThreadPtr->ID, rID, sockfd, requestQuantities);
@@ -226,7 +239,7 @@ void *ClientThread::clientThreadCode(void * param){
         close(sockfd);
 
         if (response > 0) {
-            cout << "Request was sent to wait by the server." << endl;
+            cout << "Request was sent to wait by the server. ";
             cout << "Waiting " << response << " ms before trying again." << endl;
             
             usleep(response * 1000);
@@ -264,8 +277,11 @@ void *ClientThread::clientThreadCode(void * param){
 void ClientThread::waitUntilServerFinishes(){
     /// TP2_TO_DO
 
-    // TODO: Fix.
+    // On attend d'abord que tous les clients aient termine.
+    // while (countClientsProcessed != numClients);
+    
     /*
+    // TODO: Fix.
     string name_str = i_to_str(portNumber);
     const char* name_char = name_str.c_str();
     int serverPipe;
@@ -273,13 +289,12 @@ void ClientThread::waitUntilServerFinishes(){
     if (serverPipe < 1)
         error("ERROR opening fifo server pipe");	
     bool finished = false;
-    */
 
-    while (countClientsProcessed != numClients);
-
-    /*
-    while (!finished)
+    while (!finished) {
+        cout << finished << endl;
         read(serverPipe, &finished, sizeof(bool));
+        cout << finished << endl;
+    }
     cout << "server has sent FINISHED message to client through pipe" << portNumber << endl;
 
     close(serverPipe);
