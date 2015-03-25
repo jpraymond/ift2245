@@ -234,8 +234,13 @@ int ServerThreads::parseCheckRequest(char Buffer[], int &clientThreadID, int *&R
   // Requete conforme. On prepare clientThreadID et Request.
   clientThreadID = localClientThreadID;
   Request = localRequest;
-
-  return (isPositive > 0) + 1;
+  
+  
+  if (isPositive == 0)
+    return 2;
+  else
+    return (isPositive > 0) + 1;
+    
 }
 
 
@@ -515,31 +520,18 @@ bool ServerThreads::isNotSafe(int id, int request [])
 // http://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
 void ServerThreads::signalFinishToClient(){
         string name_str = i_to_str(portNumber);
-
         const char* name_char = name_str.c_str();
-        if (fileExists(name_char)) remove(name_char);
-	sleep(2);
-	int createdPipe;
-	createdPipe = mkfifo(name_char, 0666); 
-	if (createdPipe < 0)
-		error("ERROR creating a fifo server pipe");
-
-	cout  <<"fifo pipe " << portNumber << " created successfully" << endl;
-
-	bool finish = true;
-	int serverPipe;
-	serverPipe = open(name_char, O_RDWR);
+        
+        bool finished = true;
+	int serverPipe = open(name_char, O_RDWR);
 	if (serverPipe < 1)
-		error("ERROR opening fifo server pipe");
-
- 	write(serverPipe, &finish, sizeof(bool));
+            error("ERROR creating a fifo server pipe");
+ 	write(serverPipe, &finished, sizeof(bool));
 
  	cout  <<"server FINISHED message sent to client through pipe " << portNumber << endl;
 
 	close(serverPipe);
 }
-
-
 
 
 /// Do not modify this function
@@ -588,6 +580,18 @@ void* ServerThreads::threadCode(void * param){
 /// Do not modify this function
 /// Rather use it as an example to uderstand socket functionality
 void ServerThreads::createAndStart(){
+
+// creation du canal de transfert utilise en fin de traitement des requetes
+string name_str = i_to_str(portNumber);
+const char* name_char = name_str.c_str();
+if (fileExists(name_char)) remove(name_char);
+	sleep(2);
+	int createdPipe;
+	createdPipe = mkfifo(name_char, 0666); 
+	if (createdPipe < 0)
+		error("ERROR creating a fifo server pipe");
+
+	cout  <<"fifo pipe " << portNumber << " created successfully" << endl;
 
 
 	//Create the main server socket and define a port to listen to
@@ -706,6 +710,7 @@ void ServerThreads::readConfigurationFile(const char *fileName){
 				}
 			}
 		}
+                writeMaxToFile();
 	}
 	
 	cout << "Server started with configuration: " << endl << endl;

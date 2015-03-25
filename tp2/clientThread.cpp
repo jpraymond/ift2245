@@ -219,19 +219,9 @@ void *ClientThread::clientThreadCode(void * param){
               server->h_length);
         serv_addr.sin_port = htons(portNumber);
 
-        // bool success = false;
-        // while (!success) {
-            if (connect(sockfd,
-                        (struct sockaddr *) &serv_addr,
-                        sizeof(serv_addr))
-                < 0) {
-                // cout << "ERROR connecting. We retry." << endl;   
-                error("ERROR connecting"); 
-        //    }
-        //    else {
-        //        success = true;
-            }
-        // }
+        if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+            error("ERROR connecting");
+        }
         /** ====================================================================== */
         
         int response = sendRequest(clientThreadPtr->ID, rID, sockfd, requestQuantities);
@@ -245,7 +235,7 @@ void *ClientThread::clientThreadCode(void * param){
             usleep(response * 1000);
         }
         else {
-            if (response == 0) {
+            if (rID < (numRequests - 1) && response == 0) {
                 usedAtLeastOneResource = true;
             }
             delete requestQuantities;
@@ -276,31 +266,24 @@ void *ClientThread::clientThreadCode(void * param){
 /// its excecution. HINT: Look for named pipes
 void ClientThread::waitUntilServerFinishes(){
     /// TP2_TO_DO
-
-    // On attend d'abord que tous les clients aient termine.
-    // while (countClientsProcessed != numClients);
-    
-    /*
-    // TODO: Fix.
+   
     string name_str = i_to_str(portNumber);
     const char* name_char = name_str.c_str();
     int serverPipe;
     serverPipe = open(name_char, O_RDWR);
     if (serverPipe < 1)
+        // TODO: On devrait plutot attendre et reessayer.
         error("ERROR opening fifo server pipe");	
-    bool finished = false;
 
+    bool finished = false;   
     while (!finished) {
-        cout << finished << endl;
         read(serverPipe, &finished, sizeof(bool));
-        cout << finished << endl;
     }
     cout << "server has sent FINISHED message to client through pipe" << portNumber << endl;
 
     close(serverPipe);
-    */
 
-    /// TP2_END_TO_DO
+    /// END_TP2_TO_DO
 }
 
 /// You can modify this function to print other values at
