@@ -38,11 +38,13 @@ private:
 	static int countOnWait;				// Result counter for total request denied and put to wait
 	static int countInvalid;			// Result counter for total invalid requests
 	static int countClientsDispatched;	        // Result counter for total clients correctly finished
+        static int countClientsProcessed;               // Qui ont envoye toutes leurs requetes.
 
         static pthread_mutex_t mutexCountAccepted;
         static pthread_mutex_t mutexCountOnWait;
         static pthread_mutex_t mutexCountInvalid;
         static pthread_mutex_t mutexCountClientsDispatched;
+        static pthread_mutex_t mutexCountClientsProcessed;
 	
 	static int count;					// Common counter of created ClienThread to asign an ID
 	pthread_t pt_tid;					// The thread identifier

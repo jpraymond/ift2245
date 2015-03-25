@@ -20,8 +20,7 @@ int ClientThread::sendRequest(int clientID, int requestID, int socketFD,
     ressources a mettre dans la requete qui est envoyee au serveur. Si
     requestQuantities est NULL, la requete est generee selon clientID et requestID.
 
-    Retourne un delai d'attente (ms) si la requete ne peut etre traitee immediatement
-    par le serveur (requete 'onWait'). Retourne 0 sinon.
+    Retourne la valeur retournee par le serveur.
     */
 
     /// TP2_TO_DO
@@ -97,7 +96,7 @@ int ClientThread::sendRequest(int clientID, int requestID, int socketFD,
         pthread_mutex_unlock(&mutexCountInvalid);
     }
 
-    return response > 0 ? response : 0;
+    return response;
 
     /// TP2_END_TO_DO
 }
@@ -187,6 +186,8 @@ void *ClientThread::clientThreadCode(void * param){
 
     int *requestQuantities = NULL;
 
+    bool usedAtLeastOneResource = false;
+
     for (int rID = 0 ; rID < numRequests ; rID++ ) {
         //Start creating conextions to send the request
 
@@ -220,14 +221,20 @@ void *ClientThread::clientThreadCode(void * param){
         }
         /** ====================================================================== */
         
-        int delai = sendRequest(clientThreadPtr->ID, rID, sockfd, requestQuantities);
+        int response = sendRequest(clientThreadPtr->ID, rID, sockfd, requestQuantities);
 
         close(sockfd);
 
-        if (delai > 0) {
-            // TODO: ...
+        if (response > 0) {
+            cout << "Request was sent to wait by the server." << endl;
+            cout << "Waiting " << response << " ms before trying again." << endl;
+            
+            usleep(response * 1000);
         }
         else {
+            if (response == 0) {
+                usedAtLeastOneResource = true;
+            }
             delete requestQuantities;
             requestQuantities = NULL;
         }
@@ -237,10 +244,15 @@ void *ClientThread::clientThreadCode(void * param){
 
     delete requestQuantities;
 
-    // TODO: Not exactly ok.
-    pthread_mutex_lock(&mutexCountClientsDispatched);
-    countClientsDispatched++;
-    pthread_mutex_unlock(&mutexCountClientsDispatched);
+    pthread_mutex_lock(&mutexCountClientsProcessed);
+    countClientsProcessed++;
+    pthread_mutex_unlock(&mutexCountClientsProcessed);
+
+    if (usedAtLeastOneResource) {
+        pthread_mutex_lock(&mutexCountClientsDispatched);
+        countClientsDispatched++;
+        pthread_mutex_unlock(&mutexCountClientsDispatched);
+    }
 
     pthread_exit(NULL);
 }
@@ -263,7 +275,7 @@ void ClientThread::waitUntilServerFinishes(){
     bool finished = false;
     */
 
-    while (countClientsDispatched != numClients);
+    while (countClientsProcessed != numClients);
 
     /*
     while (!finished)
@@ -377,16 +389,18 @@ int ClientThread::numClients = 0;
 int ClientThread::numResources = 0;
 int ClientThread::numRequests = 0;
 
-// Initialization of result variables 
+// Initialization of result variables
 int ClientThread::countAccepted = 0;
 int ClientThread::countOnWait = 0;
 int ClientThread::countInvalid = 0;
 int ClientThread::countClientsDispatched = 0;
+int ClientThread::countClientsProcessed = 0; // Qui ont envoye toutes leurs requetes.
 
 pthread_mutex_t ClientThread::mutexCountAccepted = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t ClientThread::mutexCountOnWait = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t ClientThread::mutexCountInvalid = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t ClientThread::mutexCountClientsDispatched = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ClientThread::mutexCountClientsProcessed = PTHREAD_MUTEX_INITIALIZER;
 
 int **ClientThread::Max = NULL;
 int **ClientThread::allocatedResources = NULL;

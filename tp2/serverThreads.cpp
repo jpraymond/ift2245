@@ -508,9 +508,7 @@ bool ServerThreads::isNotSafe(int id, int request [])
 
 // see http://tuxthink.blogspot.ca/2012/02/inter-process-communication-using-named.html	
 // http://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
-void ServerThreads::signalFinishToClient(){
-	cout << "debut signal" << endl;
-	
+void ServerThreads::signalFinishToClient(){	
 string name_str = i_to_str(portNumber);
 
 const char* name_char = name_str.c_str();
@@ -573,7 +571,6 @@ void* ServerThreads::threadCode(void * param){
 		if (threadSocketFD > 0){
 			// Process request from connection
 			processRequest(ID,threadSocketFD);
-                        cout << "processRequest" << endl;
 			close(threadSocketFD);
 		}
 				
