@@ -233,8 +233,13 @@ int ServerThreads::parseCheckRequest(char Buffer[], int &clientThreadID, int *&R
   // Requete conforme. On prepare clientThreadID et Request.
   clientThreadID = localClientThreadID;
   Request = localRequest;
-
-  return (isPositive > 0) + 1;
+  
+  
+  if (isPositive == 0)
+    return 2;
+  else
+    return (isPositive > 0) + 1;
+    
 }
 
 
