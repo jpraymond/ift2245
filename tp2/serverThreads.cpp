@@ -514,18 +514,8 @@ bool ServerThreads::isNotSafe(int id, int request [])
 // http://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
 void ServerThreads::signalFinishToClient(){
 
-string name_str = i_to_str(portNumber);
-
-const char* name_char = name_str.c_str();
-if (fileExists(name_char)) remove(name_char);
-	sleep(2);
-	int createdPipe;
-	createdPipe = mkfifo(name_char, 0666); 
-	if (createdPipe < 0)
-		error("ERROR creating a fifo server pipe");
-
-	cout  <<"fifo pipe " << portNumber << " created successfully" << endl;
-
+	string name_str = i_to_str(portNumber);
+  const char* name_char = name_str.c_str();
 	bool finish = true;
 	int serverPipe;
 	serverPipe = open(name_char, O_RDWR);
@@ -538,8 +528,6 @@ if (fileExists(name_char)) remove(name_char);
 
 	close(serverPipe);
 }
-
-
 
 
 /// Do not modify this function
@@ -589,6 +577,18 @@ void* ServerThreads::threadCode(void * param){
 /// Do not modify this function
 /// Rather use it as an example to uderstand socket functionality
 void ServerThreads::createAndStart(){
+
+// creation du canal de transfert utilise en fin de traitement des requetes
+string name_str = i_to_str(portNumber);
+const char* name_char = name_str.c_str();
+if (fileExists(name_char)) remove(name_char);
+	sleep(2);
+	int createdPipe;
+	createdPipe = mkfifo(name_char, 0666); 
+	if (createdPipe < 0)
+		error("ERROR creating a fifo server pipe");
+
+	cout  <<"fifo pipe " << portNumber << " created successfully" << endl;
 
 
 	//Create the main server socket and define a port to listen to

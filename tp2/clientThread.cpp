@@ -262,30 +262,24 @@ void *ClientThread::clientThreadCode(void * param){
 /// wait for the server to proccess all request before ending
 /// its excecution. HINT: Look for named pipes
 void ClientThread::waitUntilServerFinishes(){
-    /// TP2_TO_DO
-
-    // TODO: Fix.
-    /*
+    
     string name_str = i_to_str(portNumber);
     const char* name_char = name_str.c_str();
     int serverPipe;
     serverPipe = open(name_char, O_RDWR);
     if (serverPipe < 1)
         error("ERROR opening fifo server pipe");	
-    bool finished = false;
-    */
+    bool finished = false;   
 
     while (countClientsProcessed != numClients);
-
-    /*
+   
     while (!finished)
         read(serverPipe, &finished, sizeof(bool));
     cout << "server has sent FINISHED message to client through pipe" << portNumber << endl;
 
     close(serverPipe);
-    */
+    
 
-    /// TP2_END_TO_DO
 }
 
 /// You can modify this function to print other values at
