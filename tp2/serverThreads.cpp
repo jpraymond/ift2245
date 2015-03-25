@@ -320,7 +320,6 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	    answerToClient = -1;
 	    LockGuard lockcI(lock_countInvalid);
 	    countInvalid++;
-            cout << "fin unexact rejected" << endl;
 	  }
 	// sinon
 	else 
@@ -411,40 +410,28 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	    }
 	}
     } // fin demande de ressources
-   
-  cout << "fin logic" << endl;
-		  
+  		  
   n = sprintf(Buffer,"%d",answerToClient); 
   n = write(socketFD,Buffer,n);
   if (n < 0) error("ERROR writing to socket");
 	  
   if (read(socketFD,Buffer,255) == 0)
     { 
-      cout << "apres lecture" << endl;
       LockGuard lock_rP(lock_requestProcesed);
       requestProcesed++;
       LockGuard lock_NPPC(lock_NumProcPerClient);
       LockGuard lock_cCD(lock_countClientsDispatched);
-      cout << "juste avant test" << endl;
       if (numRequestsPerClient ==  ++NumProcPerClient[recClientThreadID])
 	     {
-              cout << "dans le test1" << endl;
-              cout << "dans le test2" << endl;
 	      countClientsDispatched++;
-              cout << "dans le test3" << endl;
 	      LockGuard lock_Al(lock_Allocation);
-              cout << "dans le test4" << endl;
 	      for (int i = 0; i < numResources; i++)
 	        {
 	      Allocation[recClientThreadID][i] = 0;
-	        }
-              cout << "dans le test5" << endl;
-		
+	        }		
 	    }
     }
 
-    cout << "apres maj compteurs" << endl;
-   
  
   // chronometrage
   
@@ -458,8 +445,6 @@ void ServerThreads::processRequest(int threadID, int socketFD)
     //double alpha = 0.5;
     //lastProcMilli = alpha * newProcMilli + (1 - alpha) * lastProcMilli;
     lastProcMilli = newProcMilli;
-
-    cout << "fin methode processRequest" << endl; 
 }
 
 
@@ -477,7 +462,6 @@ bool ServerThreads::isNotSafe(int id, int request [])
     }
   for (int i = 0 ; i < numResources ; i++)
     {
-      cout << Available[i] << " " << Allocation[id][i] << " " << request[i] << endl;
       Work[i] = Available[i] + request[i];
       HypoAllocation[id][i] = Allocation[id][i] - request[i];
       HypoNeed[id][i] = Need[id][i] + request[i];
@@ -498,8 +482,6 @@ bool ServerThreads::isNotSafe(int id, int request [])
 	  RowHypoNeed[m] = HypoNeed[ind][m];
 	}
 
-      cout << ind << "; " << ints_to_str(RowHypoNeed, numResources) << "; "
-           << ints_to_str(Work, numResources) << endl;
       if(isSmallerOrEqual(RowHypoNeed, Work, numResources))
 	{
 	  Finish[ind] = true;

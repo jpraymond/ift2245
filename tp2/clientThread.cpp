@@ -13,60 +13,91 @@ void ClientThread::additionalInitialization(){
 
 /// Implement in this function the code necesesary to generate and
 /// sent each request based on the parameters given.
-void ClientThread::sendRequest( int clientID, int requestID, int socketFD){
+int ClientThread::sendRequest(int clientID, int requestID, int socketFD,
+                              int *&requestQuantities) {
+    /*
+    Il est attendu que l'argument requestQuantities contienne les quantites de
+    ressources a mettre dans la requete qui est envoyee au serveur. Si
+    requestQuantities est NULL, la requete est generee selon clientID et requestID.
+
+    Retourne un delai d'attente (ms) si la requete ne peut etre traitee immediatement
+    par le serveur (requete 'onWait'). Retourne 0 sinon.
+    */
+
     /// TP2_TO_DO
 
-    // Les nombres de ressources a mettre dans la requete.
-    int *resourceQuantities = new int[numResources]();
+    if (requestQuantities == NULL || requestID == numRequests -1) {
+        if (requestQuantities == NULL) {
+            requestQuantities = new int[numResources]();
+        }
     
-    // On determine le contenu de resourceQuantities.
-    if (requestID == 0) { // La premiere requete.
-        randomAllocations(clientID, resourceQuantities);
+        // On determine le contenu de requestQuantities.
+        if (requestID == 0) { // La premiere requete.
+            randomAllocations(clientID, requestQuantities);
+        }
+        else if (requestID == numRequests - 1) { // La derniere requete.
+            copy(allocatedResources[clientID],
+                 allocatedResources[clientID] + numResources,
+                 requestQuantities);
+        }
+        // Les autres requetes.
+        else if (!allocationPossible(clientID)) {
+            // Le client utilise presentement toutes les ressources a sa
+            // disposition.
+            randomReleases(clientID, requestQuantities);
+        }
+        else if (!releasePossible(clientID)) {
+            // Le client utilise presentement une seule ressource.
+            randomAllocations(clientID, requestQuantities);
+        }
+        // A ce stade-ci, le client a l'option de faire une demande ou une
+        // liberation de ressources. On 'flip' un trente sous.
+        else if (rand() % 2) {
+            randomAllocations(clientID, requestQuantities);
+        }
+        else {
+            randomReleases(clientID, requestQuantities);
+        }
     }
-    else if (requestID == numRequests - 1) { // La derniere requete.
-        copy(allocatedResources[clientID],
-             allocatedResources[clientID] + numResources,
-             resourceQuantities);
-    }
-    // Les autres requetes.
-    else if (!allocationPossible(clientID)) {
-        // Le client utilise presentement toutes les ressources a sa
-        // disposition.
-        randomReleases(clientID, resourceQuantities);
-    }
-    else if (!releasePossible(clientID)) {
-        // Le client utilise presentement une seule ressource.
-        randomAllocations(clientID, resourceQuantities);
-    }
-    // A ce stade-ci, le client a l'option de faire une demande ou une
-    // liberation de ressources. On 'flip' un trente sous.
-    else if (rand() % 2) {
-        randomAllocations(clientID, resourceQuantities);
-    }
-    else {
-        randomReleases(clientID, resourceQuantities);
-    }
-    
+
     // On batit la requete.
-    string request = i_to_str(clientID);
-    request = request + " " + ints_to_str(resourceQuantities, numResources);
+    string request = i_to_str(clientID) +
+                     " " +
+                     ints_to_str(requestQuantities, numResources);
+    // cout << request << endl;
 
     write(socketFD, request.c_str(), request.length());
     
     cout << "Client " << clientID << " is sending its " << requestID << " request" << endl;
-    cout << request << endl;
 
-    // TODO: Gerer la reponse du serveur.
-    char reply[20];
-    bzero(reply, 20);
-    read(socketFD, reply, 19);
+    char buffer[20];
+    bzero(buffer, 20);
+    read(socketFD, buffer, 19);
 
-    // On met a jour allocatedResources.
-    for (int i = 0; i < numResources; i++) {
-        allocatedResources[clientID][i] -= resourceQuantities[i];
+    // TODO: S'assurer qu'on recoit bel et bien un nombre.
+    int response = atoi(buffer);
+    if (response == 0) { // Requete acceptee.
+        // On met a jour allocatedResources.
+        for (int i = 0; i < numResources; i++) {
+            allocatedResources[clientID][i] -= requestQuantities[i];
+        }
+
+        pthread_mutex_lock(&mutexCountAccepted);
+        countAccepted++;
+        pthread_mutex_unlock(&mutexCountAccepted);
+    }
+    else if (response > 0) { // Requete 'onWait'.        
+        pthread_mutex_lock(&mutexCountOnWait);
+        countOnWait++;
+        pthread_mutex_unlock(&mutexCountOnWait);
+    }
+    else { // Requete invalide.
+        pthread_mutex_lock(&mutexCountInvalid);
+        countInvalid++;
+        pthread_mutex_unlock(&mutexCountInvalid);
     }
 
-    delete resourceQuantities;
+    return response > 0 ? response : 0;
 
     /// TP2_END_TO_DO
 }
@@ -154,6 +185,8 @@ void *ClientThread::clientThreadCode(void * param){
     struct hostent *server;
     struct sockaddr_in serv_addr;
 
+    int *requestQuantities = NULL;
+
     for (int rID = 0 ; rID < numRequests ; rID++ ) {
         //Start creating conextions to send the request
 
@@ -187,13 +220,24 @@ void *ClientThread::clientThreadCode(void * param){
         }
         /** ====================================================================== */
         
-        sendRequest(clientThreadPtr->ID,rID,sockfd);
+        int delai = sendRequest(clientThreadPtr->ID, rID, sockfd, requestQuantities);
 
         close(sockfd);
+
+        if (delai > 0) {
+            // TODO: ...
+        }
+        else {
+            delete requestQuantities;
+            requestQuantities = NULL;
+        }
 	
 	/// TP2_END_TO_DO 
     }
 
+    delete requestQuantities;
+
+    // TODO: Not exactly ok.
     pthread_mutex_lock(&mutexCountClientsDispatched);
     countClientsDispatched++;
     pthread_mutex_unlock(&mutexCountClientsDispatched);
@@ -209,7 +253,7 @@ void ClientThread::waitUntilServerFinishes(){
     /// TP2_TO_DO
 
     // TODO: Fix.
-    /*    
+    /*
     string name_str = i_to_str(portNumber);
     const char* name_char = name_str.c_str();
     int serverPipe;
@@ -305,9 +349,8 @@ ClientThread::~ClientThread(){
     pthread_mutex_destroy(&mutexCountInvalid);
     pthread_mutex_destroy(&mutexCountClientsDispatched);
     
-    // TODO: Semble inverse. On devrait 'loop' sur numClients.
     if (Max != NULL) {
-        for (int i = 0 ; i < numResources  ; i++)
+        for (int i = 0 ; i < numClients; i++)
             delete []Max[i];
         delete []Max;
         Max = NULL;

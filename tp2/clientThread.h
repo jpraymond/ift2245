@@ -20,7 +20,8 @@ public:
 	~ClientThread();
 	void createAndStartThread();
 	static void additionalInitialization();
-	static void sendRequest( int clientID, int requestID, int socketFD);
+	static int sendRequest(int clientID, int requestID, int socketFD,
+                               int *&requestQuantities);
 	static void waitUntilServerFinishes();
 	static void printAndSaveResults(const char* fileName);
 	static int readConfigurationFile(const char *fileName);
