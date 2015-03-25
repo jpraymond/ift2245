@@ -121,7 +121,7 @@ bool ServerThreads::isSmallerOrEqual(int Left[], int Right[], int dim)
   return value;
 }
 
-/*
+
 bool ServerThreads::isEqualToZero(int Tab[], int dim)
 {
   bool value = true;
@@ -135,7 +135,7 @@ bool ServerThreads::isEqualToZero(int Tab[], int dim)
     }
   return value;
 }
-*/
+
 
 void ServerThreads::initializationOfDataStructures()
 {
@@ -160,7 +160,7 @@ void ServerThreads::initializationOfDataStructures()
     {
       Finish[i] = NULL;
       NumProcPerClient[i] = 0;
-      ClientsReleased[i] = false;
+      ClientsAccomodated[i] = false;
       for (int j = 0 ; j < numResources ; j++)
 	{
 	  Allocation[i][j] = 0;
@@ -325,12 +325,18 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	else 
 	  {
 	    cout  << " LAST request " << Buffer << " from client thread " << recClientThreadID << " asking to RELEASE resources is EXACT: ACCEPTED " << endl;
-	    answerToClient = 0;
-	    LockGuard lock_cA(lock_countAccepted);
-	    countAccepted++;
+	    answerToClient = 0;	    
 	    subtractFromAlloc(recClientThreadID, RecRequest);
-	    addToAvail(RecRequest);
-	  }
+	    addToAvail(RecRequest);	    
+	    LockGuard lock_CR(lock_ClientsAccomodated);
+	     if(ClientsAccomodated[recClientThreadID])
+	     {
+	      LockGuard lock_cCD(lock_countClientsDispatched);
+      	countClientsDispatched++;
+       }       
+       LockGuard lock_cA(lock_countAccepted);
+	     countAccepted++;
+   	  }
 
       }
 
@@ -383,7 +389,7 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	  // ressources demandees excessives
 	  if (asksBeyondMax(recClientThreadID, RecRequest))
 	    {
-	      cout  <<" request " << Buffer  << " from client thread " << recClientThreadID << " to OBTAIN resources is EXCESSIVE: REJECTED" << endl;
+	      cout  << "request " << Buffer  << " from client thread " << recClientThreadID << " to OBTAIN resources is EXCESSIVE: REJECTED" << endl;
 	      answerToClient = -1;	  
 	      LockGuard lockcI(lock_countInvalid);    
 	      countInvalid++;	     
@@ -392,21 +398,25 @@ void ServerThreads::processRequest(int threadID, int socketFD)
 	  else  if (isNotSafe(recClientThreadID, RecRequest))
 	    {
 	      cout  << "request " << Buffer  << " from client thread " << recClientThreadID << " to OBTAIN resources is ON WAIT: UNSAFE" << endl;
-	      delay = lastProcMilli * numClients;
+	      delay = lastProcMilli * numClients + 100;
 	      answerToClient = delay;
 	      LockGuard lock_cOW(lock_countOnWait);
-	      countOnWait++;
-	   
+	      countOnWait++;	   
 	    }
 	  // safe demand
 	  else
 	    {
 	      cout  << "request " << Buffer  << " from client thread " << recClientThreadID <<"to OBTAIN resources is ACCEPTED" << endl;
-	      answerToClient = 0;
+	      answerToClient = 0;	      
+	      subtractFromAlloc(recClientThreadID, RecRequest);
+	      addToAvail(RecRequest);
+	      if (!isEqualToZero(RecRequest, numResources))
+	     	  {
+	           LockGuard lock_CR(lock_ClientsAccomodated);
+	           ClientsAccomodated[recClientThreadID] = true;
+	        }
 	      LockGuard lock_cA(lock_countAccepted);
 	      countAccepted++;
-	      subtractFromAlloc(recClientThreadID, RecRequest);
-	      addToAvail(RecRequest);    
 	    }
 	}
     } // fin demande de ressources
@@ -416,22 +426,19 @@ void ServerThreads::processRequest(int threadID, int socketFD)
   if (n < 0) error("ERROR writing to socket");
 	  
   if (read(socketFD,Buffer,255) == 0)
-    { 
-      LockGuard lock_rP(lock_requestProcesed);
-      requestProcesed++;
+    {      
       LockGuard lock_NPPC(lock_NumProcPerClient);
-      LockGuard lock_cCD(lock_countClientsDispatched);
-      if (numRequestsPerClient ==  ++NumProcPerClient[recClientThreadID])
-	     {
-	      countClientsDispatched++;
+      if (numRequestsPerClient == ++NumProcPerClient[recClientThreadID])
+	     {	    
 	      LockGuard lock_Al(lock_Allocation);
 	      for (int i = 0; i < numResources; i++)
 	        {
 	      Allocation[recClientThreadID][i] = 0;
 	        }		
 	    }
+	     LockGuard lock_rP(lock_requestProcesed);
+      requestProcesed++;
     }
-
  
   // chronometrage
   
@@ -440,10 +447,7 @@ void ServerThreads::processRequest(int threadID, int socketFD)
     seconds  = end.tv_sec  - start.tv_sec;
     useconds = end.tv_usec - start.tv_usec;
     newProcMilli = ((seconds) * 1000 + useconds/1000.0) + 0.5;
-    //printf("Elapsed time: %ld milliseconds\n", newProcMilli);
-    // lissage exponentiel
-    //double alpha = 0.5;
-    //lastProcMilli = alpha * newProcMilli + (1 - alpha) * lastProcMilli;
+    //printf("Elapsed time: %ld milliseconds\n", newProcMilli);   
     lastProcMilli = newProcMilli;
 }
 
@@ -509,8 +513,7 @@ bool ServerThreads::isNotSafe(int id, int request [])
 // see http://tuxthink.blogspot.ca/2012/02/inter-process-communication-using-named.html	
 // http://stackoverflow.com/questions/10847237/how-to-convert-from-int-to-char
 void ServerThreads::signalFinishToClient(){
-	cout << "debut signal" << endl;
-	
+
 string name_str = i_to_str(portNumber);
 
 const char* name_char = name_str.c_str();
@@ -573,7 +576,6 @@ void* ServerThreads::threadCode(void * param){
 		if (threadSocketFD > 0){
 			// Process request from connection
 			processRequest(ID,threadSocketFD);
-                        cout << "processRequest" << endl;
 			close(threadSocketFD);
 		}
 				
@@ -674,7 +676,7 @@ void ServerThreads::readConfigurationFile(const char *fileName){
   HypoAllocation = new int*[numClients];
   HypoNeed = new int*[numClients];
   NumProcPerClient = new int[numClients];
-  ClientsReleased = new bool[numClients];
+  ClientsAccomodated = new bool[numClients];
 
   for (int i = 0 ; i < numClients ; i++){
     Max[i] = new int[numResources];
@@ -799,7 +801,7 @@ pthread_mutex_destroy(&lock_lastProcMilli);
   pthread_mutex_destroy(&lock_HypoAllocation);
   pthread_mutex_destroy(&lock_HypoNeed);
   pthread_mutex_destroy(&lock_NumProcPerClient);
-  pthread_mutex_destroy(&lock_ClientsReleased);
+  pthread_mutex_destroy(&lock_ClientsAccomodated);
   pthread_mutex_destroy(&lock_countAccepted);	
   pthread_mutex_destroy(&lock_countOnWait);	
   pthread_mutex_destroy(&lock_countInvalid);	
@@ -838,7 +840,7 @@ int* ServerThreads::Work = NULL;
 int** ServerThreads::HypoAllocation = NULL;
 int** ServerThreads::HypoNeed = NULL;
 int* ServerThreads::NumProcPerClient = NULL;
-bool* ServerThreads::ClientsReleased = NULL;
+bool* ServerThreads::ClientsAccomodated = NULL;
 
  pthread_mutex_t ServerThreads::lock_lastProcMilli= PTHREAD_MUTEX_INITIALIZER;
  pthread_mutex_t ServerThreads::lock_serverSocketFD= PTHREAD_MUTEX_INITIALIZER; 	
@@ -852,7 +854,7 @@ bool* ServerThreads::ClientsReleased = NULL;
   pthread_mutex_t ServerThreads::lock_HypoAllocation= PTHREAD_MUTEX_INITIALIZER;
   pthread_mutex_t ServerThreads::lock_HypoNeed= PTHREAD_MUTEX_INITIALIZER;
   pthread_mutex_t ServerThreads::lock_NumProcPerClient= PTHREAD_MUTEX_INITIALIZER;
-  pthread_mutex_t ServerThreads::lock_ClientsReleased= PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t ServerThreads::lock_ClientsAccomodated= PTHREAD_MUTEX_INITIALIZER;
   pthread_mutex_t ServerThreads::lock_countAccepted= PTHREAD_MUTEX_INITIALIZER;	
   pthread_mutex_t ServerThreads::lock_countOnWait= PTHREAD_MUTEX_INITIALIZER;	
   pthread_mutex_t ServerThreads::lock_countInvalid= PTHREAD_MUTEX_INITIALIZER;	
@@ -873,7 +875,7 @@ bool* ServerThreads::ClientsReleased = NULL;
     LockGuard lock_HA(lock_HypoAllocation);
     LockGuard lock_HN(lock_HypoNeed);
     LockGuard lock_NPPC(lock_NumProcPerClient);
-    LockGuard lock_CR(lock_ClientsReleased);
+    LockGuard lock_CR(lock_ClientsAccomodated);
     LockGuard lock_cA(lock_countAccepted);	
     LockGuard lock_cOW(lock_countOnWait);	
     LockGuard lockcI(lock_countInvalid);	
