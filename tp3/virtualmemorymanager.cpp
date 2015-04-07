@@ -7,6 +7,8 @@ Command::Command(unsigned int logicAddress): logicalAdd(logicAddress){
     /// --------TP3__TO_DO---------
     ///
     ///
+   offset = logicAddress & 0xFF; // least-significant byte.
+   pageNumber = (logicAddress & 0xFFFF) >> 8; // 2nd least-significant byte.
 }
 
 // After reading all commands and storing them in the commandList
