@@ -2,7 +2,7 @@
 
 int main()
 {
-    ifstream commands("../VirtualMemoryManager/addresses.txt",ios::in);
+    ifstream commands("addresses.txt",ios::in);
 
     VirtualMemoryManager vm;
 

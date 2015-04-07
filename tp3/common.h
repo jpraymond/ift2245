@@ -17,5 +17,10 @@
 
 using namespace std;
 
+
+static int leastSignificantByte(unsigned int n, int nth=1) {
+    return (n >> (8 * (nth - 1))) & 0xFF;
+}
+
 #endif // COMMON
 
