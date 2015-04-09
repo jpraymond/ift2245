@@ -6,6 +6,7 @@
 #include <fstream>
 #include <stack>
 #include <list>
+#include <string>
 
 #define NUM_FRAMES 256
 #define NUM_PAGES 256
