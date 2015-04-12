@@ -14,22 +14,32 @@ Command::Command(unsigned int logicAddress): logicalAdd(logicAddress){
 // After reading all commands and storing them in the commandList
 // traverse the list to apply each command.
 void VirtualMemoryManager::applyCommands(){
+    // TODO: Page-Faults et Page founds.
+
+    // TODO: Utiliser TLB.
+
     for (list<Command>::iterator it = commandList.begin(); it != commandList.end(); it++){
         Command c = *it;
-        signed char val = '\0';
 
         /// --------TP3__TO_DO---------
         ///
         ///
-        int physicalAddress = 0;
-
+        Page *page = &pageTable[c.pageNumber];
+        if (!page->verificationBit) {
+            page->frameNumber = physicalMemory.findFreeFrame();
+            physicalMemory.demandPageFromBackingStoreDirect(c.pageNumber,
+                                                            page->frameNumber);
+            page->verificationBit = true;
+        }
+        
+        int physicalAddress = page->frameNumber*256 + c.offset;
+        signed char val = physicalMemory.getValueFromFrameAndOffset(page->frameNumber, c.offset);
 
         cout << "Original Addr: " << setw(5) << c.logicalAdd
              << "\tPage: " << setw(3) << c.pageNumber
              << "\tOffset: " << setw(3) << c.offset
              << "\tPhysical Addr: " << setw(5) << physicalAddress
              << "\tValue: " << val << endl;
-
     }
 }
 

@@ -2,15 +2,21 @@
 
 PhysicalMemory::PhysicalMemory(){
   //Open the BACKING_STORE file to being able to read from it afterwards
-  backingStoreFile.open("../VirtualMemoryManager/BACKING_STORE.txt",ios::in );
+  backingStoreFile.open("BACKING_STORE.txt",ios::in );
 
   // fills the PhysicalMemory with spaces ' '
   // initialise la pile des cadres disponibles
   for (int i=0; i<PHYSICAL_MEMORY_SIZE; ++i)
     {
       physicalMemoryData[i] = ' ';
-      freeFrames.push_front(i);
     }
+
+  // initialise la pile des cadres disponibles
+  for (int i=0; i<NUM_FRAMES; ++i)
+    {
+      freeFrames.push_back(i);
+    }
+  
 }
 
 PhysicalMemory::~PhysicalMemory(){
@@ -19,6 +25,7 @@ PhysicalMemory::~PhysicalMemory(){
 }
 
 // retourne un numero de cadre libre et met a jour la piled des cadres disponibles
+// TODO: Si freeFrames est vide ...?
 int PhysicalMemory::findFreeFrame(){
   int frameNumber = freeFrames.front();
   freeFrames.pop_front();
@@ -37,10 +44,13 @@ int PhysicalMemory::demandPageFromBackingStoreDirect(unsigned int fromPageNumber
   // nombre d'entrees apparaissant dans les cadres precedents de la memoire
   int beforeFrame = toFrameNumber * PAGE_FRAME_SIZE;
   // copie la page demandee depuis la reserve vers la memoire
+  // TODO: Il est probablement possible d'utiliser une fonction qui permet de
+  //       copier un bloc de memoire.
   for (int i = 0; i < PAGE_FRAME_SIZE; i++)
-    {      
+    {
       physicalMemoryData[beforeFrame + i] = buffer[i];
     }
+  delete[] buffer;
   // reinitialisation de la reserve
   backingStoreFile.clear();
   backingStoreFile.seekg(0, ios::beg);
