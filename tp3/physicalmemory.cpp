@@ -26,8 +26,30 @@ int PhysicalMemory::findFreeFrame(){
 }
 
 // TODO: configurer correctement la valeur retournee
-// cherche la page indiquee dans la reserve et la copie dans le cadre indique
-int PhysicalMemory::demandPageFromBackingStore(unsigned int fromPageNumber, unsigned int toFrameNumber)
+// recherche directement la page indiquee dans la reserve et la copie dans le cadre indique
+int PhysicalMemory::demandPageFromBackingStoreDirect(unsigned int fromPageNumber, unsigned int toFrameNumber)
+{  
+  // nombre d'entrees apparaissant dans les pages precedentes de la reserve
+  unsigned int beforePage = fromPageNumber * PAGE_FRAME_SIZE;
+  backingStoreFile.seekg(beforePage);
+  char * buffer = new char [PAGE_FRAME_SIZE];
+  backingStoreFile.read (buffer, PAGE_FRAME_SIZE);
+  // nombre d'entrees apparaissant dans les cadres precedents de la memoire
+  int beforeFrame = toFrameNumber * PAGE_FRAME_SIZE;
+  // copie la page demandee depuis la reserve vers la memoire
+  for (int i = 0; i < PAGE_FRAME_SIZE; i++)
+    {      
+      physicalMemoryData[beforeFrame + i] = buffer[i];
+    }
+  // reinitialisation de la reserve
+  backingStoreFile.clear();
+  backingStoreFile.seekg(0, ios::beg);
+  return 0;
+}
+
+// TODO: configurer correctement la valeur retournee
+// recherche lineaire de la page indiquee dans la reserve et la copie dans le cadre indique
+int PhysicalMemory::demandPageFromBackingStoreLinear(unsigned int fromPageNumber, unsigned int toFrameNumber)
 {  
   // nombre d'entrees apparaissant dans les pages precedentes de la reserve
   unsigned int beforePage = fromPageNumber * PAGE_FRAME_SIZE;
