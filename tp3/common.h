@@ -7,6 +7,7 @@
 #include <stack>
 #include <list>
 #include <string>
+#include <unordered_map>
 
 #define NUM_FRAMES 256
 #define NUM_PAGES 256

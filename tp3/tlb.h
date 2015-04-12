@@ -17,6 +17,10 @@ class TLB
   // permet l'implementation du remplacement suivant PEPS (FIFO)
   list<int> fifoQueue;
 
+  // dictionnaire auxiliaire permettant la recherche rapide dans le TLB
+  // cle: numero de page memoire; valeur: indice du TLB
+  unordered_map<int, int> TLBSearchMap;
+
   // permet l'implementation du remplacement suivant MRU (LRU)
   int currentSequNumber;
   int sequNumbers[TLB_NUM_ENTRIES];
@@ -29,14 +33,17 @@ class TLB
   // Looks for the pageNumber in the table, if it finds it it return
   // the coresponding frame if not it returns -1;
   int findPage(int pageNumber);
-   
+  int findPageSearchMap(int pageNumber);
+  
   // Ajoute une paire (pageNumber,frameNumber) au tableau TLB avec remplacement
   // suivant la methode PEPS (FIFO) lorsque le tableau TLB est plein
   void addEntryFIFO(int pageNumber, int frameNumber);
+  void addEntryFIFOSearchMap(int pageNumber, int frameNumber);
 
   // Ajoute une paire (pageNumber,frameNumber) au tableau TLB avec remplacement
   // suivant la methode MRU (LRU) lorsque le tableau TLB est plein
   void addEntryLRU(int pageNumber, int frameNumber);
+  void addEntryLRUSearchMap(int pageNumber, int frameNumber);
 
   int nextEntryAvailable;
 
