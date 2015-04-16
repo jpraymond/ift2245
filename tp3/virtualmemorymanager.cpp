@@ -16,29 +16,40 @@ Command::Command(unsigned int logicAddress): logicalAdd(logicAddress){
 void VirtualMemoryManager::applyCommands(){
     pageFaultCount = 0;
     pageFoundCount = 0;
-
-    // TODO: Utiliser TLB.
+    TLBHitCount = 0;
+    TLBMissCount = 0;
 
     for (list<Command>::iterator it = commandList.begin(); it != commandList.end(); it++){
         Command c = *it;
 
         /// --------TP3__TO_DO---------
         ///
-        ///
-        Page *page = &pageTable[c.pageNumber];
-        if (!page->verificationBit) {
-            page->frameNumber = physicalMemory.findFreeFrame();
-            physicalMemory.demandPageFromBackingStoreDirect(c.pageNumber,
-                                                            page->frameNumber);
-            page->verificationBit = true;
-            pageFaultCount++;
+        ///        
+        int frameNumber = tlb.findPage(c.pageNumber);
+
+        if (frameNumber == -1) {
+            Page *page = &pageTable[c.pageNumber];
+            if (!page->verificationBit) {
+                page->frameNumber = physicalMemory.findFreeFrame();
+                physicalMemory.demandPageFromBackingStoreDirect(c.pageNumber,
+                                                                page->frameNumber);
+                page->verificationBit = true;
+                pageFaultCount++;
+            }
+            else {
+                pageFoundCount++;
+            }
+            frameNumber = page->frameNumber;
+            tlb.addEntryFIFO(c.pageNumber, frameNumber);
+            TLBMissCount++;
         }
         else {
             pageFoundCount++;
+            TLBHitCount++;
         }
         
-        int physicalAddress = page->frameNumber*256 + c.offset;
-        signed char val = physicalMemory.getValueFromFrameAndOffset(page->frameNumber, c.offset);
+        int physicalAddress = frameNumber*256 + c.offset;
+        signed char val = physicalMemory.getValueFromFrameAndOffset(frameNumber, c.offset);
 
         cout << "Original Addr: " << setw(5) << c.logicalAdd
              << "\tPage: " << setw(3) << c.pageNumber
