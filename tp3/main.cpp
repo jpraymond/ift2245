@@ -2,7 +2,7 @@
 
 int main()
 {
-    ifstream commands("addresses.txt",ios::in);
+    ifstream commands("addressesRANDOM.txt",ios::in);
 
     VirtualMemoryManager vm;
 

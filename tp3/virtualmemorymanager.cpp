@@ -14,7 +14,8 @@ Command::Command(unsigned int logicAddress): logicalAdd(logicAddress){
 // After reading all commands and storing them in the commandList
 // traverse the list to apply each command.
 void VirtualMemoryManager::applyCommands(){
-    // TODO: Page-Faults et Page founds.
+    pageFaultCount = 0;
+    pageFoundCount = 0;
 
     // TODO: Utiliser TLB.
 
@@ -30,6 +31,10 @@ void VirtualMemoryManager::applyCommands(){
             physicalMemory.demandPageFromBackingStoreDirect(c.pageNumber,
                                                             page->frameNumber);
             page->verificationBit = true;
+            pageFaultCount++;
+        }
+        else {
+            pageFoundCount++;
         }
         
         int physicalAddress = page->frameNumber*256 + c.offset;
