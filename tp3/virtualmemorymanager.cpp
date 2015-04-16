@@ -27,23 +27,23 @@ void VirtualMemoryManager::applyCommands(){
         ///        
         int frameNumber = tlb.findPage(c.pageNumber);
 
-        if (frameNumber == -1) {
+        if (frameNumber == -1) { // La page n'etait pas dans le TLB.
             Page *page = &pageTable[c.pageNumber];
-            if (!page->verificationBit) {
+            if (!page->verificationBit) { // La page n'etait pas en memoire.
                 page->frameNumber = physicalMemory.findFreeFrame();
                 physicalMemory.demandPageFromBackingStoreDirect(c.pageNumber,
                                                                 page->frameNumber);
                 page->verificationBit = true;
                 pageFaultCount++;
             }
-            else {
+            else { // La page etait en memoire.
                 pageFoundCount++;
             }
             frameNumber = page->frameNumber;
             tlb.addEntryFIFO(c.pageNumber, frameNumber);
             TLBMissCount++;
         }
-        else {
+        else { // La page etait dans le TLB.
             pageFoundCount++;
             TLBHitCount++;
         }
