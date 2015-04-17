@@ -21,8 +21,7 @@ class PhysicalMemory
   int findFreeFrame();
 
   //Reads a certain page (256 bytes) from the BACKING_STORE, starting at page 'pageNumber'
-  int demandPageFromBackingStoreLinear(unsigned int fromPageNumber, unsigned int toFrameNumber);
-  int demandPageFromBackingStoreDirect(unsigned int fromPageNumber, unsigned int toFrameNumber);
+  void demandPageFromBackingStore(unsigned int fromPageNumber, unsigned int toFrameNumber);
 
   //Given the frameNumber and the offset get the char value at that physical address
   char getValueFromFrameAndOffset(unsigned int frameNumber, unsigned int offset);

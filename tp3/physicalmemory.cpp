@@ -32,9 +32,8 @@ int PhysicalMemory::findFreeFrame(){
   return frameNumber;
 }
 
-// TODO: configurer correctement la valeur retournee
 // recherche directement la page indiquee dans la reserve et la copie dans le cadre indique
-int PhysicalMemory::demandPageFromBackingStoreDirect(unsigned int fromPageNumber, unsigned int toFrameNumber)
+void PhysicalMemory::demandPageFromBackingStore(unsigned int fromPageNumber, unsigned int toFrameNumber)
 {  
   // nombre d'entrees apparaissant dans les pages precedentes de la reserve
   unsigned int beforePage = fromPageNumber * PAGE_FRAME_SIZE;
@@ -44,43 +43,11 @@ int PhysicalMemory::demandPageFromBackingStoreDirect(unsigned int fromPageNumber
   // nombre d'entrees apparaissant dans les cadres precedents de la memoire
   int beforeFrame = toFrameNumber * PAGE_FRAME_SIZE;
   // copie la page demandee depuis la reserve vers la memoire
-  // TODO: Il est probablement possible d'utiliser une fonction qui permet de
-  //       copier un bloc de memoire.
-  for (int i = 0; i < PAGE_FRAME_SIZE; i++)
-    {
-      physicalMemoryData[beforeFrame + i] = buffer[i];
-    }
+  memcpy(&physicalMemoryData[beforeFrame], buffer, PAGE_FRAME_SIZE);
   delete[] buffer;
   // reinitialisation de la reserve
   backingStoreFile.clear();
   backingStoreFile.seekg(0, ios::beg);
-  return 0;
-}
-
-// TODO: configurer correctement la valeur retournee
-// recherche lineaire de la page indiquee dans la reserve et la copie dans le cadre indique
-int PhysicalMemory::demandPageFromBackingStoreLinear(unsigned int fromPageNumber, unsigned int toFrameNumber)
-{  
-  // nombre d'entrees apparaissant dans les pages precedentes de la reserve
-  unsigned int beforePage = fromPageNumber * PAGE_FRAME_SIZE;
-  char token;
-  // parcours des entrees situees dans les pages precedentes
-  for (int i = 0; i < beforePage; i++)
-    {
-      backingStoreFile >> token;
-    }
-  // nombre d'entrees apparaissant dans les cadres precedents de la memoire
-  int beforeFrame = toFrameNumber * PAGE_FRAME_SIZE;
-  // copie la page demandee depuis la reserve vers la memoire
-  for (int i = 0; i < PAGE_FRAME_SIZE; i++)
-    {
-      backingStoreFile >> token;
-      physicalMemoryData[beforeFrame + i] = token;
-    }
-  // reinitialisation de la reserve
-  backingStoreFile.clear();
-  backingStoreFile.seekg(0, ios::beg);
-  return 0;
 }
 
 // retourne l'entree se trouvant au cadre et decalage indiques

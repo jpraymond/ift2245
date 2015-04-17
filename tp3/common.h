@@ -7,6 +7,7 @@
 #include <stack>
 #include <list>
 #include <string>
+#include <cstring>
 #include <unordered_map>
 #include <time.h>
 

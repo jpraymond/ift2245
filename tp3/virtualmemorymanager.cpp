@@ -36,8 +36,8 @@ void VirtualMemoryManager::applyCommands(){
             Page *page = &pageTable[c.pageNumber];
             if (!page->verificationBit) { // La page n'etait pas en memoire.
                 page->frameNumber = physicalMemory.findFreeFrame();
-                physicalMemory.demandPageFromBackingStoreDirect(c.pageNumber,
-                                                                page->frameNumber);
+                physicalMemory.demandPageFromBackingStore(c.pageNumber,
+                                                          page->frameNumber);
                 page->verificationBit = true;
                 pageFaultCount++;
             }
