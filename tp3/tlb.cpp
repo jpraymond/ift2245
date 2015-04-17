@@ -57,6 +57,8 @@ void TLB::addEntryFIFO(int pageNumber, int frameNumber){
 // Ajoute une paire (pageNumber,frameNumber) au tableau TLB avec remplacement
 // suivant la methode MRU (LRU) lorsque le tableau TLB est plein
 // Adapte a la recherche lineaire
+// TODO: Extraire les traitements communs a addEntryFIFO et addEntryLRU et les
+//       mettre dans une methode auxiliaire.
 void TLB::addEntryLRU(int pageNumber, int frameNumber){
   // le tableau TLP n'est pas encore plein
   if (nextEntryAvailable >= 0 && nextEntryAvailable < TLB_NUM_ENTRIES)
@@ -80,7 +82,7 @@ void TLB::addEntryLRU(int pageNumber, int frameNumber){
       int min = currentSequNumber;
       int select = -1;
       // recherche lineaire de la page la moins recemment consultee
-      for (int i = 0; i < TLB_NUM_ENTRIES; i ++)
+      for (int i = 0; i < TLB_NUM_ENTRIES; i++)
 	{
 	  if (sequNumbers[i] <= min)
 	    {
@@ -102,9 +104,7 @@ void TLB::addEntryLRU(int pageNumber, int frameNumber){
 int TLB::findPageSearchMap(int pageNumber){
   int found = -1;
   unordered_map<int, int>::iterator it = TLBSearchMap.find(pageNumber);
-  if (it == TLBSearchMap.end())
-    found = -1;
-  else
+  if (it != TLBSearchMap.end())
     {
       found = TLBTable[it->second].frameNumber;
       // mise a jour de l'estampille de la page trouvee pour permettre l'usage de addEntryLRU()
@@ -139,12 +139,19 @@ void TLB::addEntryFIFOSearchMap(int pageNumber, int frameNumber){
   else
     {
       // substitution dans le tableau TLB d'apres PEPS
+
       int select = fifoQueue.front();
       fifoQueue.pop_front();
+      
+      int pageToRemove = TLBTable[select].pageNumber;
+
       TLBTable[select].pageNumber = pageNumber;
       TLBTable[select].frameNumber = frameNumber;
+      
       // mise a jour du dictionnaire de recherche
+      TLBSearchMap.erase(pageToRemove);
       TLBSearchMap[pageNumber] = select;
+
       // mise a jour de la file PEPS
       fifoQueue.push_back(select);    
     }
@@ -186,11 +193,16 @@ void TLB::addEntryLRUSearchMap(int pageNumber, int frameNumber){
 	      select = i;
 	    }
 	}
-      // substitution dans le tableau TLP
+      int pageToRemove = TLBTable[select].pageNumber;
+      
+      // substitution dans le tableau TLP      
       TLBTable[select].pageNumber = pageNumber;
       TLBTable[select].frameNumber = frameNumber;
+      
       // mise a jour du dictionnaire de recherche
+      TLBSearchMap.erase(pageToRemove);
       TLBSearchMap[pageNumber] = select;
+
       // mise a jour de l'estampille de la page nouvellement inseree
       sequNumbers[select] = currentSequNumber;
       currentSequNumber++;     

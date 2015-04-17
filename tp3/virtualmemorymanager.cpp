@@ -24,8 +24,8 @@ void VirtualMemoryManager::applyCommands(){
 
         /// --------TP3__TO_DO---------
         ///
-        ///        
-        int frameNumber = tlb.findPage(c.pageNumber);
+        ///
+        int frameNumber = tlb.findPageSearchMap(c.pageNumber);
 
         if (frameNumber == -1) { // La page n'etait pas dans le TLB.
             Page *page = &pageTable[c.pageNumber];
@@ -40,7 +40,7 @@ void VirtualMemoryManager::applyCommands(){
                 pageFoundCount++;
             }
             frameNumber = page->frameNumber;
-            tlb.addEntryFIFO(c.pageNumber, frameNumber);
+            tlb.addEntryFIFOSearchMap(c.pageNumber, frameNumber);
             TLBMissCount++;
         }
         else { // La page etait dans le TLB.

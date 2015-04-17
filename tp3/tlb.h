@@ -22,7 +22,10 @@ class TLB
   unordered_map<int, int> TLBSearchMap;
 
   // permet l'implementation du remplacement suivant MRU (LRU)
+  // TODO: Il me semble que l'utilisation d'un numero de sequence va poser
+  //       probleme lorsqu'on va atteindre la valeur maximale d'un int.
   int currentSequNumber;
+  // TODO: Pourquoi ne pas simplement ajouter un attribute a TLB_entry?
   int sequNumbers[TLB_NUM_ENTRIES];
 
  public:
