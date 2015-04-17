@@ -19,13 +19,18 @@ void VirtualMemoryManager::applyCommands(){
     TLBHitCount = 0;
     TLBMissCount = 0;
 
+    long duration = 0;
+
     for (list<Command>::iterator it = commandList.begin(); it != commandList.end(); it++){
         Command c = *it;
 
         /// --------TP3__TO_DO---------
         ///
         ///
-        int frameNumber = tlb.findPageSearchMap(c.pageNumber);
+        timespec start;
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &start);
+
+        int frameNumber = tlb.findPage(c.pageNumber);
 
         if (frameNumber == -1) { // La page n'etait pas dans le TLB.
             Page *page = &pageTable[c.pageNumber];
@@ -40,13 +45,18 @@ void VirtualMemoryManager::applyCommands(){
                 pageFoundCount++;
             }
             frameNumber = page->frameNumber;
-            tlb.addEntryFIFOSearchMap(c.pageNumber, frameNumber);
+            tlb.addEntry(c.pageNumber, frameNumber);
             TLBMissCount++;
         }
         else { // La page etait dans le TLB.
             pageFoundCount++;
             TLBHitCount++;
         }
+    
+        timespec end;
+        clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &end);
+
+        duration += diff(start, end).tv_nsec;
         
         int physicalAddress = frameNumber*256 + c.offset;
         signed char val = physicalMemory.getValueFromFrameAndOffset(frameNumber, c.offset);
@@ -57,6 +67,8 @@ void VirtualMemoryManager::applyCommands(){
              << "\tPhysical Addr: " << setw(5) << physicalAddress
              << "\tValue: " << val << endl;
     }
+
+    // cout << duration / (1000.0 * 1000.0 * 1000.0) << endl;
 }
 
 void VirtualMemoryManager::printResults(){
