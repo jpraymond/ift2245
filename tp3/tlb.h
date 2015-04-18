@@ -29,6 +29,8 @@ class TLB
   void addEntryLRU(int pageNumber, int frameNumber);
   void addEntryLRUSearchMap(int pageNumber, int frameNumber);
 
+  string queueToString();
+
  public:
   TLB_entry TLBTable[TLB_NUM_ENTRIES];
 
