@@ -89,6 +89,11 @@ int TLB::findPageSearchMap(int pageNumber){
   if (it != TLBSearchMap.end())
     {
       found = TLBTable[it->second].frameNumber;
+      if (TLB_MODE == 1) {
+        // On retourne la page utilisee au debut de la file.
+        lruFifoQueue.remove(i);
+        lruFifoQueue.push_back(i);
+      }
     }
   return found;
 }
@@ -96,7 +101,7 @@ int TLB::findPageSearchMap(int pageNumber){
 // Ajoute une paire (pageNumber,frameNumber) au tableau TLB
 // en appliquant la methode PEPS (FIFO) lorsque le tableau TLB est plein
 // Adapte a la recherche avec dictionnaire auxiliaire
-void TLB::addEntryFIFOSearchMap(int pageNumber, int frameNumber){   
+void TLB::addEntrySearchMap(int pageNumber, int frameNumber){   
   // le tableau TLB n'est pas encore plein
   if (nextEntryAvailable >= 0 && nextEntryAvailable < TLB_NUM_ENTRIES)
     {
