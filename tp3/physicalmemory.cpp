@@ -5,7 +5,6 @@ PhysicalMemory::PhysicalMemory(){
   backingStoreFile.open("BACKING_STORE.txt",ios::in );
 
   // fills the PhysicalMemory with spaces ' '
-  // initialise la pile des cadres disponibles
   for (int i=0; i<PHYSICAL_MEMORY_SIZE; ++i)
     {
       physicalMemoryData[i] = ' ';
@@ -24,15 +23,14 @@ PhysicalMemory::~PhysicalMemory(){
   backingStoreFile.close();
 }
 
-// retourne un numero de cadre libre et met a jour la piled des cadres disponibles
-// TODO: Si freeFrames est vide ...?
+// retourne un numero de cadre libre et met a jour la pile des cadres disponibles
 int PhysicalMemory::findFreeFrame(){
   int frameNumber = freeFrames.front();
   freeFrames.pop_front();
   return frameNumber;
 }
 
-// recherche directement la page indiquee dans la reserve et la copie dans le cadre indique
+// recherche directement la page indiquee dans la reserve et la copie en bloc dans le cadre indique
 void PhysicalMemory::demandPageFromBackingStore(unsigned int fromPageNumber, unsigned int toFrameNumber)
 {  
   // nombre d'entrees apparaissant dans les pages precedentes de la reserve
@@ -42,7 +40,7 @@ void PhysicalMemory::demandPageFromBackingStore(unsigned int fromPageNumber, uns
   backingStoreFile.read (buffer, PAGE_FRAME_SIZE);
   // nombre d'entrees apparaissant dans les cadres precedents de la memoire
   int beforeFrame = toFrameNumber * PAGE_FRAME_SIZE;
-  // copie la page demandee depuis la reserve vers la memoire
+  // copie en bloc de  la page demandee depuis la reserve vers la memoire
   memcpy(&physicalMemoryData[beforeFrame], buffer, PAGE_FRAME_SIZE);
   delete[] buffer;
   // reinitialisation de la reserve

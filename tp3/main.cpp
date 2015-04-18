@@ -2,20 +2,28 @@
 
 int main()
 {
-    ifstream commands("addresses.txt",ios::in);
+  // ouverture du fichier d'adresses de lecture
+  ifstream commands("addresses.txt",ios::in);
 
-    VirtualMemoryManager vm;
+  // instanciation du gestionnaire de lecture et notamment:
+  // memoire physique, table de pagination et cache de table de pagination
+  VirtualMemoryManager vm;
 
-    int logicAddres;
-    do{
-        commands >> logicAddres;
-        vm.addCommandFromLogicAddress(logicAddres);
-    }while(commands.good());
+  // constitution de la liste d'adresses de lecture
+  int logicAddres;
+  do{
+    commands >> logicAddres;
+    vm.addCommandFromLogicAddress(logicAddres);
+  }while(commands.good());
 
-    vm.applyCommands();
-    vm.printResults();
+  // traitement de la liste d'adresses
+  vm.applyCommands();
 
-    commands.close();
-    return 0;
+  // impression des resultats comptables
+  vm.printResults();
+
+  // fermeture du fichier d'adresses
+  commands.close();
+  return 0;
 }
 

@@ -14,8 +14,8 @@ class TLB_entry{
 class TLB
 {
  private: 
-  // permet l'implementation du remplacement suivant PEPS (FIFO)
-  list<int> fifoQueue;
+  // file permettant l'implementation du remplacement suivant LRU ou FIFO
+  list<int> lruFifoQueue;
 
   // dictionnaire auxiliaire permettant la recherche rapide dans le TLB
   // cle: numero de page memoire; valeur: indice du TLB
