@@ -4,8 +4,9 @@ TLB_entry::TLB_entry(int page, int frame) :
   pageNumber(page), frameNumber(frame){
 }
 
-// recherche lineaire de la page 'pageNumber' dans la table TLB.
+// recherche lineaire de la page 'pageNumber' dans la cache TLB
 // si succes retourne le numero du cadre memoire correspondant, sinon retourne -1
+// permet le traitement des regles de remplacement FIFO et LRU
 int TLB::findPage(int pageNumber){
   int found = -1;
   for (int i = 0; i < TLB_NUM_ENTRIES; i ++)
@@ -31,13 +32,13 @@ int TLB::findPage(int pageNumber){
   return found;
 }
 
-// Ajoute une paire (pageNumber,frameNumber) au tableau TLB.
+// Ajoute une paire (pageNumber,frameNumber) dans la cache TLB.
 // Adapte a la recherche lineaire
 void TLB::addEntry(int pageNumber, int frameNumber){   
-  // le tableau TLB n'est pas encore plein
+  // la cache TLB n'est pas encore pleine
   if (nextEntryAvailable >= 0 && nextEntryAvailable < TLB_NUM_ENTRIES)
     {
-      // insertion dans le tableau TLB
+      // insertion dans la cache TLB
       TLBTable[nextEntryAvailable].pageNumber = pageNumber;
       TLBTable[nextEntryAvailable].frameNumber = frameNumber;
       
@@ -56,16 +57,13 @@ void TLB::addEntry(int pageNumber, int frameNumber){
 	  nextEntryAvailable = -1;
 	}
     }
-  // le tableau TLB est plein
+  // la cache TLB est pleine
   else
     {
-      // substitution dans le tableau TLB (suivant la methode FIFO ou LRU)
-      
+      // substitution dans la cache TLB      
       int select = lruFifoQueue.front();
       lruFifoQueue.pop_front();
-
-      int dequeuedPage = TLBTable[select].pageNumber;
-      
+      int dequeuedPage = TLBTable[select].pageNumber;     
       TLBTable[select].pageNumber = pageNumber;
       TLBTable[select].frameNumber = frameNumber;
       
@@ -81,8 +79,16 @@ void TLB::addEntry(int pageNumber, int frameNumber){
 }
 
 
-// recherche avec dictionnaire auxiliaire de la page 'pageNumber' dans la table TLB.
+// findPageSearchMap et addEntrySearchMap sont des versions alternatives des
+// fonctions precedentes qui utilisent plutot un dictionnaire de hachage pour
+// rechercher l'emplacement d'une page dans la cache TLB. Ces versions n'ont
+// pas ete retenues car moins rapides pour une cache TLB comportant seulement
+// 16 entrees.
+
+// recherche avec dictionnaire de hachage auxiliaire de la page 'pageNumber'
+// dans la cache TLB.
 // si succes retourne le numero du cadre memoire correspondant, sinon retourne -1.
+// permet le traitement des regles de remplacement FIFO et LRU.
 int TLB::findPageSearchMap(int pageNumber){
   int found = -1;
   unordered_map<int, int>::iterator it = TLBSearchMap.find(pageNumber);
@@ -91,26 +97,25 @@ int TLB::findPageSearchMap(int pageNumber){
       found = TLBTable[it->second].frameNumber;
       if (TLB_MODE == 1) {
         // On retourne la page utilisee au debut de la file.
-        lruFifoQueue.remove(i);
-        lruFifoQueue.push_back(i);
+        lruFifoQueue.remove(it->second);
+        lruFifoQueue.push_back(it->second);
       }
     }
   return found;
 }
 
-// Ajoute une paire (pageNumber,frameNumber) au tableau TLB
-// en appliquant la methode PEPS (FIFO) lorsque le tableau TLB est plein
-// Adapte a la recherche avec dictionnaire auxiliaire
+// Ajoute une paire (pageNumber,frameNumber) dans la cache TLB
+// Adapte a la recherche avec dictionnaire de hachage auxiliaire
 void TLB::addEntrySearchMap(int pageNumber, int frameNumber){   
-  // le tableau TLB n'est pas encore plein
+  // la cache TLB n'est pas encore pleine
   if (nextEntryAvailable >= 0 && nextEntryAvailable < TLB_NUM_ENTRIES)
     {
       // insertion dans le tableau TLB
       TLBTable[nextEntryAvailable].pageNumber = pageNumber;
       TLBTable[nextEntryAvailable].frameNumber = frameNumber;
-      // mise a jour du dictionnaire de recherche
+      // mise a jour du dictionnaire de hachage
       TLBSearchMap[pageNumber] = nextEntryAvailable;
-      // mise a jour de la file PEPS
+      // mise a jour de la file FIFO/LRU
       lruFifoQueue.push_back(nextEntryAvailable);
       // mise a jour du numero du prochain emplacement libre
       nextEntryAvailable++;
@@ -119,24 +124,21 @@ void TLB::addEntrySearchMap(int pageNumber, int frameNumber){
 	  nextEntryAvailable = -1;
 	}
     }
-  // le tableau TLB est plein
+  // la cache TLB est pleine
   else
     {
-      // substitution dans le tableau TLB d'apres PEPS
-
+      // substitution dans la cache TLB
       int select = lruFifoQueue.front();
-      lruFifoQueue.pop_front();
-      
+      lruFifoQueue.pop_front();      
       int pageToRemove = TLBTable[select].pageNumber;
-
       TLBTable[select].pageNumber = pageNumber;
       TLBTable[select].frameNumber = frameNumber;
       
-      // mise a jour du dictionnaire de recherche
+      // mise a jour du dictionnaire de hachage
       TLBSearchMap.erase(pageToRemove);
       TLBSearchMap[pageNumber] = select;
 
-      // mise a jour de la file PEPS
+      // mise a jour de la file FIFO/LRU
       lruFifoQueue.push_back(select);    
     }
 }
