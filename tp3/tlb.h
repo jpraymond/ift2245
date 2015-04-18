@@ -23,12 +23,6 @@ class TLB
   
   int nextEntryAvailable;
 
-
-  // Ajoute une paire (pageNumber,frameNumber) au tableau TLB avec remplacement
-  // suivant la methode MRU (LRU) lorsque le tableau TLB est plein
-  void addEntryLRU(int pageNumber, int frameNumber);
-  void addEntryLRUSearchMap(int pageNumber, int frameNumber);
-
   string queueToString();
 
  public:
@@ -45,7 +39,7 @@ class TLB
   // Ajoute une paire (pageNumber,frameNumber) au tableau TLB avec remplacement
   // suivant la methode PEPS (FIFO) ou LRU lorsque le tableau TLB est plein
   void addEntry(int pageNumber, int frameNumber);
-  void addEntryFIFOSearchMap(int pageNumber, int frameNumber);
+  void addEntrySearchMap(int pageNumber, int frameNumber);
   
   //----------DO NOT CHANGE/ERASE THIS------------------
   // this function is neccesary to output the physical
