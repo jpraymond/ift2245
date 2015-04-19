@@ -4,8 +4,14 @@
 // address according to the TP3, then save it in the
 // corresponding 'pageNumber' and 'offset' varibles
 Command::Command(unsigned int logicAddress): logicalAdd(logicAddress){
-  pageNumber = leastSignificantByte(logicAddress, 2);
-  offset = leastSignificantByte(logicAddress);
+  if (logicAddress < pow(2, 16)) { 
+    pageNumber = leastSignificantByte(logicAddress, 2);
+    offset = leastSignificantByte(logicAddress);
+  }
+  else {
+    cout << "Invalid address: " << logicAddress << endl;
+    exit(EXIT_FAILURE);
+  }
 }
 
 // After reading all commands and storing them in the commandList
@@ -71,7 +77,7 @@ void VirtualMemoryManager::applyCommands(){
 	 << "\tValue: " << val << endl;
   }
 
-  // cout << duration / (1000.0 * 1000.0 * 1000.0) << endl;
+  cout << duration / (1000.0 * 1000.0 * 1000.0) << endl;
 }
 
 // affiche les resultats comptables 

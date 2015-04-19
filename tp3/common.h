@@ -10,6 +10,7 @@
 #include <cstring>
 #include <unordered_map>
 #include <time.h>
+#include <math.h>
 
 #define NUM_FRAMES 256
 #define NUM_PAGES 256
@@ -43,4 +44,3 @@ static timespec diff(timespec start, timespec end) {
 }        
 
 #endif // COMMON
-
