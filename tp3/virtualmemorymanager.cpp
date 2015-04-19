@@ -77,7 +77,7 @@ void VirtualMemoryManager::applyCommands(){
 	 << "\tValue: " << val << endl;
   }
 
-  cout << duration / (1000.0 * 1000.0 * 1000.0) << endl;
+  // cout << duration / (1000.0 * 1000.0 * 1000.0) << endl;
 }
 
 // affiche les resultats comptables 
